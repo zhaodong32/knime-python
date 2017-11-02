@@ -273,7 +273,8 @@ def boolean_collection_generator(arrowcolumn, isset):
 def deserialize_data_frame(path):
     global read_data_frame, read_types, read_serializers, _pandas_native_types_, path_to_mmap
     path_to_mmap = path
-    with pyarrow.OSFile(path, 'rb') as f:
+    #with pyarrow.OSFile(path, 'rb') as f:
+    with pyarrow.memory_map(path) as f:
         stream_reader = pyarrow.RecordBatchStreamReader(f)
         arrowtable = stream_reader.read_all()
         #metadata 
