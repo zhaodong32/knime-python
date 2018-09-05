@@ -205,7 +205,12 @@ def types_are_equivalent(type_1, type_2):
     if is_collection(type_1) or is_collection(type_2):
         return type_1 is type_2
     if is_numpy_type(type_1) or is_numpy_type(type_2):
-        return numpy.issubdtype(type_1, type_2) and numpy.issubdtype(type_2, type_1)
+        # There is a known numpy issue where numpy.issubdtype(<anything>, bool/numpy.bool) returns True which would
+        # give invalid results, e.g., for types_are_equivalent('object', bool').
+        if type_2 == bool or type == numpy.bool or is_boolean_type(type_2):
+            return is_boolean_type(type_1)
+        else:
+            return numpy.issubdtype(type_1, type_2) and numpy.issubdtype(type_2, type_1)
     else:
         return type_1 is type_2
 

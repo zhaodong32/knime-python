@@ -275,6 +275,8 @@ class Serializer(object):
                 # Look at the column's elements to infer the type. The inferred type will either be a Python class type
                 # (e.g., in case of Python builtins or extension types) or, if the elements are numpy scalars, a numpy
                 # dtype.
+                import debug_util
+                debug_util.breakpoint()
                 column_type = Serializer._scan_column_for_type(data_frame, column_name)
                 if column_type is None:
                     # Column with only missing values, make it string.
@@ -358,7 +360,7 @@ class Serializer(object):
 
     @staticmethod
     def _is_nested(column):
-        return isinstance(column, DataFrame)
+        return isinstance(column, DataFrame) or isinstance(column, numpy.ndarray)
 
     @staticmethod
     def _get_integer_type(column):
@@ -397,15 +399,15 @@ class Serializer(object):
                                          + col_type.__name__ + ' and ' + type(cell).__name__)
                 else:
                     col_type = type(cell)
-        col_type = Serializer._convert_to_dtype_if_numpy_type(col_type)
+        col_type = Serializer._convert_to_dtype_if_numpy_scalar_type(col_type)
         return col_type
 
     @staticmethod
-    def _convert_to_dtype_if_numpy_type(col_type):
+    def _convert_to_dtype_if_numpy_scalar_type(col_type):
         """
         Converts numpy types into dtypes.
         """
-        if col_type is not None and is_numpy_type(col_type):
+        if col_type is not None and is_numpy_type(col_type) and numpy.issctype(col_type):
             try:
                 col_type = numpy.dtype(col_type)
             except Exception:
@@ -438,7 +440,7 @@ class Serializer(object):
                             col_type = type(cell)
         if col_type == list or col_type == set:
             raise ValueError('Output table contains a nested collection. Nested collections are not yet supported.')
-        col_type = Serializer._convert_to_dtype_if_numpy_type(col_type)
+        col_type = Serializer._convert_to_dtype_if_numpy_scalar_type(col_type)
         return col_type
 
     @staticmethod
