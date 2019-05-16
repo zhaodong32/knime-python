@@ -1,0 +1,4 @@
+[submodule "org.knime.python2.envconfigs/scripts"]
+	path = org.knime.python2.envconfigs/scripts
+	url = ssh://git@bitbucket.org/KNIME/scripts.git
+	branch = master
