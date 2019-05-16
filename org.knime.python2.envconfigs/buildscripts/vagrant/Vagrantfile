@@ -51,7 +51,7 @@ Vagrant.configure('2') do |config|
 
       # Install anaconda and setup the environments
       ubuntu1804.vm.provision 'shell' do |script|
-        script.path = 'install-anaconda.sh'
+        script.path = '../install-anaconda.sh'
         script.privileged = false
       end
 

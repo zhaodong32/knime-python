@@ -2,22 +2,22 @@
 
 set -x
 cd ~/python
-if [[ ! -d ~/python/anaconda ]]; then
+if [[ ! -d ~/anaconda3 ]]; then
         if [[ "$(uname -s)" == "Darwin" ]]; then
-                INST_FILE=Anaconda3-4.4.0-MacOSX-x86_64.sh
+                # INST_FILE=Miniconda3-4.4.10-MacOSX-x86_64.sh
+                INST_FILE=Anaconda3-5.1.0-MacOSX-x86_64.sh
         else
-                INST_FILE=Anaconda3-4.4.0-Linux-x86_64.sh
+                # INST_FILE=Miniconda3-4.4.10-Linux-x86_64.sh
+                INST_FILE=Anaconda3-5.1.0-Linux-x86_64.sh
         fi
 
-        wget -qN https://repo.continuum.io/archive/$INST_FILE
-        bash $INST_FILE -b -p ~/python/anaconda
+        # wget -qN https://repo.anaconda.com/miniconda/$INST_FILE
+        wget -qN https://repo.anaconda.com/archive/$INST_FILE
+        bash $INST_FILE -b -p ~/anaconda3
         rm $INST_FILE
 fi
 
-export PATH=~/python/anaconda/bin:$PATH
-
-conda env remove -n py36_knime -q -y || true
-conda env remove -n py27_knime -q -y || true
+export PATH=~/anaconda3/bin:$PATH
 
 conda env remove -n py3_knime -q -y || true
 conda env remove -n py2_knime -q -y || true
