@@ -1,0 +1,114 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.require_version '>= 2.0.0', '< 3.0.0'
+
+Vagrant.configure('2') do |config|
+  config.vm.define 'ubuntu1804' do |ubuntu1804|
+    # Vagrant box configuration
+    ubuntu1804.vm.hostname = 'ubuntu-1804-amd64--dsk'
+
+    ubuntu1804.vm.box = 'ubuntu-18.04-amd64_dsk'  # the name under which Vagrant caches the box
+    # TODO REMOVE LOCAL PATH
+    ubuntu1804.vm.box_url = \
+      'file:///home/benjamin/misc/python-desktop-vm/ubuntu-18.04-amd64_dsk.box'
+    ubuntu1804.vm.box_download_insecure = true  # ignore security for now, it's all 'internally' hosted anyway
+
+    ubuntu1804.vm.network "forwarded_port", guest: 8998, host: 8998
+
+    # Synced Folders configuration
+    # ===> Format: './src/folder/host/', '/mnt/folder/guest', disabled: false
+    ubuntu1804.vm.synced_folder '../../..', '/var/knime-python', disabled: false
+    # ===> disable the default shared folder
+    ubuntu1804.vm.synced_folder '.', '/vagrant', disabled: true
+
+    # Provider configuration
+    ubuntu1804.vm.provider :virtualbox do |v|
+      v.gui = true
+      v.name = 'ubuntu-1804-amd64--dsk'
+      v.customize [
+        'modifyvm', :id,
+        '--memory', 4096,
+        '--cpus', 4,
+        '--vram', '256'
+      ]
+      v.customize ['setextradata', 'global', 'GUI/MaxGuestResolution', 'any']
+      v.customize ['setextradata', :id, 'CustomVideoMode1', '1024x768x32']
+      v.customize [
+        'modifyvm', :id,
+        '--ioapic', 'on',
+        '--rtcuseutc', 'on',
+        '--accelerate3d', 'off',
+        '--clipboard', 'bidirectional'
+      ]
+
+      # Provisioning
+
+      # Make ~/python and copy yaml files
+      ubuntu1804.vm.provision 'shell',
+        inline: "mkdir -p ~/python && cp /var/knime-python/org.knime.python2.envconfigs/envconfigs/linux/test/py2_knime.yml ~/python && cp /var/knime-python/org.knime.python2.envconfigs/envconfigs/linux/test/py3_knime.yml ~/python/",
+        privileged: false
+
+      # Install anaconda and setup the environments
+      ubuntu1804.vm.provision 'shell' do |script|
+        script.path = 'install-anaconda.sh'
+        script.privileged = false
+      end
+
+      # Install KNIME
+      # vagrant.vm.provision 'shell' do |script|
+      #   script.path = '/home/benjamin/git/vagrant/scripts/installers/knime-ap-exec_install.sh'
+      #   script.env = {
+      #     'KNIME_VERSION' => '3.8.0_latest',
+      #     'KNIME_DOWNLOAD_URL' => \
+      #       'https://jenkins.knime.org/download/master/analytics-platform/org.knime.product.full',
+      #   }
+      #   script.privileged = false
+      # end
+
+      # Install KNIME
+      # TODO REMOVE LOCAL PATH (submodule?)
+      ubuntu1804.vm.provision 'shell' do |script|
+        script.path = '/home/benjamin/git/vagrant/scripts/installers/knime_ap_executor/knime-ap-exec_install.sh'
+        script.env = {
+          'KNIME_VERSION' => '3.8.0_latest',
+          'KNIME_FILE' => 'knime_latest.linux.gtk.x86_64.tar.gz',
+          'KNIME_DOWNLOAD_URL' => 'http://download.knime.org/analytics-platform/nightly/linux/x86_64/'
+        }
+        script.privileged = false
+      end
+
+      # Install the Python extension
+      # TODO REMOVE LOCAL PATH (submodule?)
+      ubuntu1804.vm.provision 'shell' do |script|
+        script.path = '/home/benjamin/git/vagrant/scripts/installers/knime_extensions/knime-ext_install.sh'
+        script.env = {
+          'KNIME_UPDATE_SITES' => 'http://update.knime.com/analytics-platform/3.8',
+          # 'KNIME_FEATURES' => 'org.knime.features.python2.feature.group,org.knime.features.dl.tensorflow.feature.group,org.knime.features.dl.keras.feature.group,org.knime.features.dl.onnx.feature.group',
+          'KNIME_FEATURES' => 'org.knime.features.python2.feature.group',
+          'KNIME_PATH' => '/home/vagrant/Applications/knime-3.8.0_latest'
+        }
+        script.privileged = false
+      end
+
+      # Setup the debugging
+      ubuntu1804.vm.provision 'shell' do |script|
+        script.path = './activate_knime_remote_debugger.sh'
+        script.env = {
+          'KNIME_PATH' => '/home/vagrant/Applications/knime-3.8.0_latest'
+        }
+        script.privileged = false
+      end
+
+      # Configure knime
+      ubuntu1804.vm.provision 'file',
+        source: './knime_configuration.ini',
+        destination: '~/knime_configuration.ini'
+
+      # Add configuration to knime.ini
+      ubuntu1804.vm.provision 'shell',
+        inline: "sed -i '1s/^/-pluginCustomization\\n\\/home\\/vagrant\\/knime_configuration.ini\\n/' /home/vagrant/Applications/knime-3.8.0_latest/knime.ini",
+        privileged: false
+    end
+  end
+end
