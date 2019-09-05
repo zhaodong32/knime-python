@@ -372,6 +372,12 @@ public class PythonKernel implements AutoCloseable {
         final String serializationLibraryPath = SerializationLibraryExtensions
             .getSerializationLibraryPath(m_kernelOptions.getSerializationOptions().getSerializerId());
         // Build and start Python kernel that listens to the given port:
+        // Leads to:
+        // [4381] Error loading Python lib '/home/teststation/default-workspace/git/knime-python/org.knime.python2.
+        // dist.37.linux.amd64/dist/libpython3.7m.so.1.0': dlopen: /lib/x86_64-linux-gnu/libm.so.6: version
+        // `GLIBC_2.29' not found (required by /home/teststation/default-workspace/git/knime-python/org.knime.
+        // python2.dist.37.linux.amd64/dist/libpython3.7m.so.1.0)
+        // on test station's (old) Linux Mint installation.
         final ProcessBuilder pb = new ProcessBuilder(
             "/home/marcel/git/knime-python/org.knime.python2.installation.37.linux.amd64/dist/PythonKernelLauncher");
         //        if (m_kernelOptions.getUsePython3()) {
