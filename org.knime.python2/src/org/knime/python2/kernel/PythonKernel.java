@@ -105,8 +105,6 @@ import org.knime.python.typeextension.PythonModuleExtensions;
 import org.knime.python.typeextension.PythonToKnimeExtension;
 import org.knime.python.typeextension.PythonToKnimeExtensions;
 import org.knime.python2.Activator;
-import org.knime.python2.PythonKernelTester;
-import org.knime.python2.PythonKernelTester.PythonKernelTestResult;
 import org.knime.python2.extensions.serializationlibrary.SentinelOption;
 import org.knime.python2.extensions.serializationlibrary.SerializationLibraryExtensions;
 import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
@@ -334,15 +332,15 @@ public class PythonKernel implements AutoCloseable {
     // Setup methods:
 
     private void testInstallation() throws PythonIOException {
-        final PythonKernelTestResult testResult = m_kernelOptions.getUsePython3()
-            ? PythonKernelTester.testPython3Installation(m_kernelOptions.getPython3Command(),
-                m_kernelOptions.getAdditionalRequiredModules(), false)
-            : PythonKernelTester.testPython2Installation(m_kernelOptions.getPython2Command(),
-                m_kernelOptions.getAdditionalRequiredModules(), false);
-        if (testResult.hasError()) {
-            throw new PythonIOException(
-                "Could not start Python kernel. Error during Python installation test: " + testResult.getErrorLog());
-        }
+//        final PythonKernelTestResult testResult = m_kernelOptions.getUsePython3()
+//            ? PythonKernelTester.testPython3Installation(m_kernelOptions.getPython3Command(),
+//                m_kernelOptions.getAdditionalRequiredModules(), false)
+//            : PythonKernelTester.testPython2Installation(m_kernelOptions.getPython2Command(),
+//                m_kernelOptions.getAdditionalRequiredModules(), false);
+//        if (testResult.hasError()) {
+//            throw new PythonIOException(
+//                "Could not start Python kernel. Error during Python installation test: " + testResult.getErrorLog());
+//        }
     }
 
     private SerializationLibrary setupSerializationLibrary() throws PythonIOException {
@@ -374,14 +372,16 @@ public class PythonKernel implements AutoCloseable {
         final String serializationLibraryPath = SerializationLibraryExtensions
             .getSerializationLibraryPath(m_kernelOptions.getSerializationOptions().getSerializerId());
         // Build and start Python kernel that listens to the given port:
-        final ProcessBuilder pb;
-        if (m_kernelOptions.getUsePython3()) {
-            pb = m_kernelOptions.getPython3Command().createProcessBuilder();
-        } else {
-            pb = m_kernelOptions.getPython2Command().createProcessBuilder();
-        }
+        final ProcessBuilder pb = new ProcessBuilder(
+            "/home/marcel/git/knime-python/org.knime.python2.installation.37.linux.amd64/dist/PythonKernelLauncher");
+        //        if (m_kernelOptions.getUsePython3()) {
+        //            pb = m_kernelOptions.getPython3Command().createProcessBuilder();
+        //        } else {
+        //            pb = m_kernelOptions.getPython2Command().createProcessBuilder();
+        //        }
         // Use the -u options to force Python to not buffer stdout and stderror.
-        Collections.addAll(pb.command(), "-u", kernelScriptPath, port, serializationLibraryPath);
+        //        Collections.addAll(pb.command(), "-u", kernelScriptPath, port, serializationLibraryPath);
+        Collections.addAll(pb.command(), port, serializationLibraryPath);
         // Add all python modules to PYTHONPATH variable.
         String existingPath = pb.environment().get("PYTHONPATH");
         existingPath = existingPath == null ? "" : existingPath;
