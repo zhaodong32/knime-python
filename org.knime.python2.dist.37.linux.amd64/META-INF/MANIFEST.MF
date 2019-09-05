@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Python 3.7 Distribution for Linux x86_64
+Bundle-SymbolicName: org.knime.python2.dist.37.linux.amd64;singleton:=true
+Bundle-Version: 4.1.0.qualifier
+Bundle-Vendor: KNIME AG, Zurich, Switzerland
+Fragment-Host: org.knime.python2;bundle-version="4.1.0.qualifier"
+Eclipse-PlatformFilter: (&(osgi.os=linux)(osgi.arch=x86_64))
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Eclipse-BundleShape: dir
