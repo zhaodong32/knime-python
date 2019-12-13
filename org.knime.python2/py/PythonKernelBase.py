@@ -299,13 +299,13 @@ class PythonKernelBase(Borg):
 
     # Life cycle:
 
-    def start(self):
+    def start(self, socket_port, serialization_lib):
         if not self._is_running:
             if self._is_closed:
                 raise RuntimeError('Python kernel is closed and cannot be restarted.')
             self._is_running = True
             debug_msg("Connect.")
-            self._connection = self._connect(('localhost', int(sys.argv[1])))
+            self._connection = self._connect(('127.0.0.1', socket_port))
             debug_msg("Create executors.")
             self._execute_thread_executor = self._create_execute_thread_executor()
             self._executor = self._create_executor()
@@ -313,7 +313,7 @@ class PythonKernelBase(Borg):
             self._commands = PythonCommands(self._create_messaging(self._connection), self)
             self._setup_builtin_request_handlers()
             debug_msg("Load serialization library.")
-            self._serialization_library = self._load_serialization_library(sys.argv[2])
+            self._serialization_library = self._load_serialization_library(serialization_lib)
             debug_msg("Create type extension manager.")
             self._type_extension_manager = TypeExtensionManager(self._commands)
             debug_msg("Create serialization helper.")

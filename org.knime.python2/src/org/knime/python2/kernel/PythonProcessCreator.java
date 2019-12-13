@@ -49,8 +49,13 @@
 package org.knime.python2.kernel;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,6 +72,17 @@ import com.google.common.base.Strings;
  * @author Benjamin Wilhelm, KNIME GmbH, Konstanz, Germany
  */
 public class PythonProcessCreator {
+
+    private static final String PROCESS_CREATOR_RELATIVE_PATH = "py/ProcessCreator.py";
+
+    private static final String PROCESS_CREATOR_PATH =
+        Activator.getFile(Activator.PLUGIN_ID, PROCESS_CREATOR_RELATIVE_PATH).getAbsolutePath();
+
+    private static final int CREATE_PROCESS = 0;
+
+    private static final int IS_PROCESS_ALIVE = 1;
+
+    private static final int DESTROY_PROCESS = 2;
 
     private static PythonProcessCreator instance;
 
@@ -92,9 +108,16 @@ public class PythonProcessCreator {
         m_processes = new HashMap<>();
     }
 
-    public Process createPythonProcess(final PythonKernelOptions options) {
+    public PythonProcess createPythonProcess(final PythonKernelOptions options, final int socketPort) {
         final ParentProcess parentProcess = getParentProcess(options);
-        // TODO
+        try {
+            System.out.println("Port: " + parentProcess.m_socket.getPort());
+            System.out.println("Local port: " + parentProcess.m_socket.getLocalPort());
+            sendToSocket(parentProcess.m_socket, CREATE_PROCESS, socketPort);
+            return new PythonProcess(socketPort, parentProcess.m_socket);
+        } catch (final Exception ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     private ParentProcess getParentProcess(final PythonKernelOptions options) {
@@ -112,7 +135,6 @@ public class PythonProcessCreator {
             serverSocket.setSoTimeout(PythonKernel.getConnectionTimeoutInMillis());
             final Future<Socket> setupSocket = setupSocket(serverSocket);
 
-            final String kernelScriptPath = options.getKernelScriptPath();
             final String port = Integer.toString(serverSocket.getLocalPort());
             final String serializationLibraryPath = SerializationLibraryExtensions
                 .getSerializationLibraryPath(options.getSerializationOptions().getSerializerId());
@@ -124,7 +146,7 @@ public class PythonProcessCreator {
                 pb = options.getPython2Command().createProcessBuilder();
             }
             // Use the -u options to force Python to not buffer stdout and stderror.
-            Collections.addAll(pb.command(), "-u", kernelScriptPath, port, serializationLibraryPath);
+            Collections.addAll(pb.command(), "-u", PROCESS_CREATOR_PATH, port, serializationLibraryPath);
             // Add all python modules to PYTHONPATH variable.
             String existingPath = pb.environment().get("PYTHONPATH");
             existingPath = existingPath == null ? "" : existingPath;
@@ -144,9 +166,6 @@ public class PythonProcessCreator {
             existingPath = existingPath + File.pathSeparator;
             pb.environment().put("PYTHONPATH", existingPath);
 
-            pb.redirectOutput(ProcessBuilder.Redirect.PIPE);
-            pb.redirectError(ProcessBuilder.Redirect.PIPE);
-
             // Start Python.
             final Process process = pb.start();
 
@@ -162,6 +181,24 @@ public class PythonProcessCreator {
     /** TODO copied from PythonKernel (combine?) */
     private static Future<Socket> setupSocket(final ServerSocket serverSocket) {
         return Executors.newSingleThreadExecutor().submit(serverSocket::accept);
+    }
+
+    /** Send the given integers on the given socket */
+    private static void sendToSocket(final Socket socket, final int... values) throws IOException {
+        final OutputStream outputStream = socket.getOutputStream();
+        final ByteBuffer data = ByteBuffer.allocate(values.length * 4).order(ByteOrder.BIG_ENDIAN);
+        for (final int v : values) {
+            data.putInt(v);
+        }
+        outputStream.write(data.array());
+        outputStream.flush();
+    }
+
+    /** Receive the next integer on the given socket */
+    private static int reciveOnSocket(final Socket socket) throws IOException {
+        final byte[] data = new byte[4];
+        socket.getInputStream().read(data);
+        return ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN).getInt();
     }
 
     /** A Python process that starts other python processes by forking itself */
@@ -185,6 +222,61 @@ public class PythonProcessCreator {
             m_process.destroy();
             m_serverSocket.close();
             m_socket.close();
+        }
+    }
+
+    public static class PythonProcess {
+
+        private final InputStream blockingStream = new InputStream() {
+
+            @Override
+            public int read() throws IOException {
+                return -1;
+            }
+        };
+
+        private final Socket m_parentSocket;
+
+        private final int m_socketPort;
+
+        public PythonProcess(final int socketPort, final Socket parentSocket) {
+            m_socketPort = socketPort;
+            m_parentSocket = parentSocket;
+        }
+
+        public InputStream getInputStream() {
+            return blockingStream;
+        }
+
+        public InputStream getErrorStream() {
+            return blockingStream;
+        }
+
+        public boolean isAlive() {
+            try {
+                sendToSocket(m_parentSocket, IS_PROCESS_ALIVE, m_socketPort);
+                final int processPort = reciveOnSocket(m_parentSocket);
+//                if (processPort != m_socketPort) {
+//                    throw new IllegalStateException("Got message for another process");
+//                }
+                final int is_alive = reciveOnSocket(m_parentSocket);
+                return is_alive == 1;
+            } catch (final Exception ex) {
+                throw new IllegalStateException(ex);
+            }
+        }
+
+        public void destroy() {
+            try {
+                sendToSocket(m_parentSocket, DESTROY_PROCESS, m_socketPort);
+            } catch (final IOException ex) {
+                throw new IllegalStateException(ex);
+            }
+        }
+
+        public int exitValue() {
+            // TODO implement
+            return 0;
         }
     }
 }

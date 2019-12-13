@@ -81,9 +81,9 @@ class PythonKernel(PythonKernelBase):
             self._execute_thread_cleanup_object_names.add(variable_name)
         super(PythonKernel, self).add_cleanup_object_name(variable_name)
 
-    def start(self):
+    def start(self, socket_port, serialization_lib):
         with self._is_running_or_closed_lock:
-            super(PythonKernel, self).start()
+            super(PythonKernel, self).start(socket_port, serialization_lib)
         # Call to start is blocking (main execution loop).
         self.execute_thread_executor.start()
         self._monitor.wait_for_close()

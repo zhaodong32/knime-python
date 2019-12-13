@@ -51,26 +51,27 @@
 
 from __future__ import print_function
 
-# This should be the first statement in each module (except for __future__ statements) that makes specific demands on
-# the Python environment.
-import EnvironmentHelper
+def launch_python_kernel(socket_port, serialization_lib):
+    # This should be the first statement in each module (except for __future__ statements) that makes specific demands on
+    # the Python environment.
+    import EnvironmentHelper
 
-EnvironmentHelper.dummy_call()
+    EnvironmentHelper.dummy_call()
 
-from PythonKernelExceptions import GracefulShutdown
-import sys
-import traceback
+    from PythonKernelExceptions import GracefulShutdown
+    import sys
+    import traceback
 
-# Debugging:
+    # Debugging:
 
-# Uncomment to enable debugging. You may want to disable breakpoints since they require an external debugger. See
-# debug_util module for information on how to set up a debug environment.
-# import debug_util
-# debug_util.init_debug(enable_breakpoints=True, enable_debug_log=True, debug_log_to_stderr=False)
+    # Uncomment to enable debugging. You may want to disable breakpoints since they require an external debugger. See
+    # debug_util module for information on how to set up a debug environment.
+    # import debug_util
+    # debug_util.init_debug(enable_breakpoints=True, enable_debug_log=True, debug_log_to_stderr=False)
+    print("Kernel started")
 
-# Start Python kernel:
+    # Start Python kernel:
 
-if __name__ == "__main__":
     if EnvironmentHelper.is_python3():
         from python3.PythonKernel import PythonKernel
     else:
@@ -119,7 +120,7 @@ if __name__ == "__main__":
         except BaseException:
             pass
         try:
-            kernel.start()
+            kernel.start(socket_port, serialization_lib)
         except BaseException as ex:
             if not isinstance(ex, GracefulShutdown):
                 traceback.print_exc(file=sys.stdout)

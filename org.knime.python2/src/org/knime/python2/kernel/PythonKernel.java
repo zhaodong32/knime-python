@@ -127,6 +127,7 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.impl.RowImpl
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.TableSpecImpl;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.TemporaryTableCreator;
 import org.knime.python2.generic.ImageContainer;
+import org.knime.python2.kernel.PythonProcessCreator.PythonProcess;
 import org.knime.python2.kernel.messaging.AbstractRequestHandler;
 import org.knime.python2.kernel.messaging.DefaultMessage;
 import org.knime.python2.kernel.messaging.DefaultMessage.PayloadDecoder;
@@ -199,7 +200,7 @@ public class PythonKernel implements AutoCloseable {
      */
     private final NodeContextManager m_nodeContextManager;
 
-    private final Process m_process;
+    private final PythonProcess m_process;
 
     private final Integer m_pid; // Nullable.
 
@@ -256,7 +257,8 @@ public class PythonKernel implements AutoCloseable {
             final Future<Socket> socketBeingSetup = setupSocket();
 
             // Create Python process.
-            m_process = setupPythonProcess();
+            m_process =
+                PythonProcessCreator.instance().createPythonProcess(kernelOptions, m_serverSocket.getLocalPort());
 
             // Start listening to stdout and stderror pipes.
             m_stdoutStream = m_process.getInputStream();
