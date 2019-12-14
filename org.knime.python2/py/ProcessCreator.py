@@ -69,6 +69,7 @@ def main(socket_port, serialization_lib):
     debug_util.init_debug(enable_breakpoints=True, enable_debug_log=True, debug_log_to_stderr=False)
 
     processes = {}
+    print('Parent process started at port ' + str(socket_port))
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
         connection.connect(('127.0.0.1', socket_port))
@@ -82,14 +83,19 @@ def main(socket_port, serialization_lib):
                 buffer.extend(data)
             command = struct.unpack('>i', data[0:4])[0]
             process_port = struct.unpack('>i', data[4:8])[0]
+            print('Recived message. Command ' + str(command) + ', Process port: ' + str(process_port))
             if command == CREATE_PROCESS:
                 processes[process_port] = launch_new_process(process_port, serialization_lib)
+                print('Process created')
             elif command == IS_PROCESS_ALIVE:
                 is_alive = processes[process_port].is_alive()
+                print('Process alive: ' + str(is_alive))
                 data = struct.pack('>i', process_port, int(is_alive))
+                print('Sending reply ' + data)
                 connection.sendall(data)
             elif command == DESTROY_PROCESS:
                 processes[process_port].terminate()
+                print('Process terminated')
 
     return
 

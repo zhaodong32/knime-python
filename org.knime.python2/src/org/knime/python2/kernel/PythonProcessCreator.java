@@ -145,6 +145,7 @@ public class PythonProcessCreator {
             } else {
                 pb = options.getPython2Command().createProcessBuilder();
             }
+            pb.inheritIO();
             // Use the -u options to force Python to not buffer stdout and stderror.
             Collections.addAll(pb.command(), "-u", PROCESS_CREATOR_PATH, port, serializationLibraryPath);
             // Add all python modules to PYTHONPATH variable.
@@ -256,9 +257,9 @@ public class PythonProcessCreator {
             try {
                 sendToSocket(m_parentSocket, IS_PROCESS_ALIVE, m_socketPort);
                 final int processPort = reciveOnSocket(m_parentSocket);
-//                if (processPort != m_socketPort) {
-//                    throw new IllegalStateException("Got message for another process");
-//                }
+                //                if (processPort != m_socketPort) {
+                //                    throw new IllegalStateException("Got message for another process");
+                //                }
                 final int is_alive = reciveOnSocket(m_parentSocket);
                 return is_alive == 1;
             } catch (final Exception ex) {
