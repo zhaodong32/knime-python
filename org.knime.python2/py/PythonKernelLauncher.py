@@ -50,17 +50,17 @@
 """
 
 from __future__ import print_function
+import EnvironmentHelper
+
+EnvironmentHelper.dummy_call()
+
+from PythonKernelExceptions import GracefulShutdown
+import sys
+import traceback
 
 def launch_python_kernel(socket_port, serialization_lib):
     # This should be the first statement in each module (except for __future__ statements) that makes specific demands on
     # the Python environment.
-    import EnvironmentHelper
-
-    EnvironmentHelper.dummy_call()
-
-    from PythonKernelExceptions import GracefulShutdown
-    import sys
-    import traceback
 
     # Debugging:
 

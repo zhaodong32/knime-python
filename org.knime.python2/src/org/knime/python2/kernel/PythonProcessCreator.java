@@ -50,7 +50,6 @@ package org.knime.python2.kernel;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -102,33 +101,30 @@ public class PythonProcessCreator {
         }
     }
 
-    private final Map<PythonKernelOptions, ParentProcess> m_processes;
+    private final Map<PythonKernelOptions, PythonParentProcess> m_processes;
 
     private PythonProcessCreator() {
         m_processes = new HashMap<>();
     }
 
     public PythonProcess createPythonProcess(final PythonKernelOptions options, final int socketPort) {
-        final ParentProcess parentProcess = getParentProcess(options);
+        final PythonParentProcess parentProcess = getParentProcess(options);
         try {
-            System.out.println("Port: " + parentProcess.m_socket.getPort());
-            System.out.println("Local port: " + parentProcess.m_socket.getLocalPort());
-            sendToSocket(parentProcess.m_socket, CREATE_PROCESS, socketPort);
-            return new PythonProcess(socketPort, parentProcess.m_socket);
+            return parentProcess.startKernel(socketPort);
         } catch (final Exception ex) {
             throw new IllegalStateException(ex);
         }
     }
 
-    private ParentProcess getParentProcess(final PythonKernelOptions options) {
+    private PythonParentProcess getParentProcess(final PythonKernelOptions options) {
         if (!m_processes.containsKey(options)) {
-            final ParentProcess parent = setupParentProcess(options);
+            final PythonParentProcess parent = setupParentProcess(options);
             m_processes.put(options, parent);
         }
         return m_processes.get(options);
     }
 
-    private static ParentProcess setupParentProcess(final PythonKernelOptions options) {
+    private static PythonParentProcess setupParentProcess(final PythonKernelOptions options) {
         try {
             // Open the socket for communication
             final ServerSocket serverSocket = new ServerSocket(0);
@@ -172,7 +168,7 @@ public class PythonProcessCreator {
 
             // Wait for the socekt to be connected
             final Socket socket = setupSocket.get();
-            return new ParentProcess(process, serverSocket, socket);
+            return new PythonParentProcess(process, serverSocket, socket);
         } catch (final Exception ex) {
             // TODO: handle exception
             throw new IllegalStateException(ex);
@@ -193,91 +189,5 @@ public class PythonProcessCreator {
         }
         outputStream.write(data.array());
         outputStream.flush();
-    }
-
-    /** Receive the next integer on the given socket */
-    private static int reciveOnSocket(final Socket socket) throws IOException {
-        final byte[] data = new byte[4];
-        socket.getInputStream().read(data);
-        return ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN).getInt();
-    }
-
-    /** A Python process that starts other python processes by forking itself */
-    private static class ParentProcess implements AutoCloseable {
-
-        private final Process m_process;
-
-        private final ServerSocket m_serverSocket;
-
-        private final Socket m_socket;
-
-        private ParentProcess(final Process process, final ServerSocket serverSocket, final Socket socket) {
-            m_process = process;
-            m_serverSocket = serverSocket;
-            m_socket = socket;
-        }
-
-        @Override
-        public void close() throws Exception {
-            // TODO How to close the process properly?
-            m_process.destroy();
-            m_serverSocket.close();
-            m_socket.close();
-        }
-    }
-
-    public static class PythonProcess {
-
-        private final InputStream blockingStream = new InputStream() {
-
-            @Override
-            public int read() throws IOException {
-                return -1;
-            }
-        };
-
-        private final Socket m_parentSocket;
-
-        private final int m_socketPort;
-
-        public PythonProcess(final int socketPort, final Socket parentSocket) {
-            m_socketPort = socketPort;
-            m_parentSocket = parentSocket;
-        }
-
-        public InputStream getInputStream() {
-            return blockingStream;
-        }
-
-        public InputStream getErrorStream() {
-            return blockingStream;
-        }
-
-        public boolean isAlive() {
-            try {
-                sendToSocket(m_parentSocket, IS_PROCESS_ALIVE, m_socketPort);
-                final int processPort = reciveOnSocket(m_parentSocket);
-                //                if (processPort != m_socketPort) {
-                //                    throw new IllegalStateException("Got message for another process");
-                //                }
-                final int is_alive = reciveOnSocket(m_parentSocket);
-                return is_alive == 1;
-            } catch (final Exception ex) {
-                throw new IllegalStateException(ex);
-            }
-        }
-
-        public void destroy() {
-            try {
-                sendToSocket(m_parentSocket, DESTROY_PROCESS, m_socketPort);
-            } catch (final IOException ex) {
-                throw new IllegalStateException(ex);
-            }
-        }
-
-        public int exitValue() {
-            // TODO implement
-            return 0;
-        }
     }
 }
