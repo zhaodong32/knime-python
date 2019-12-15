@@ -49,17 +49,31 @@
 package org.knime.python2.kernel;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @author Benjamin Wilhelm, KNIME GmbH, Konstanz, Germany
  */
 public class PythonParentProcess implements AutoCloseable {
+
+    private static final int SEND_CREATE_PROCESS = 0;
+
+    private static final int SEND_IS_PROCESS_ALIVE = 1;
+
+    private static final int SEND_DESTROY_PROCESS = 2;
+
+    private static final int RECEIVE_IS_ALIVE = 0;
+
+    private static final int RECEIVE_EXIT_VALUE = 1;
 
     private final Process m_process;
 
@@ -69,16 +83,40 @@ public class PythonParentProcess implements AutoCloseable {
 
     private final Map<Integer, PythonProcess> m_subProcesses;
 
+    private final Map<Integer, IsAliveFuture> m_isAliveMap;
+
     PythonParentProcess(final Process process, final ServerSocket serverSocket, final Socket socket) {
         m_process = process;
         m_serverSocket = serverSocket;
         m_socket = socket;
         m_subProcesses = new HashMap<>();
+        m_isAliveMap = new HashMap<>();
     }
 
     PythonProcess startKernel(final int socketPort) throws IOException {
-        sendToSocket(m_socket, CREATE_PROCESS, socketPort);
-        return new PythonProcess(socketPort, m_socket);
+        sendToSocket(m_socket, SEND_CREATE_PROCESS, socketPort);
+        final PythonProcess subProcess = new PythonProcess(socketPort, this);
+        m_subProcesses.put(socketPort, subProcess);
+        return subProcess;
+    }
+
+    boolean isAlive(final int socketPort) {
+        try {
+            final IsAliveFuture future = new IsAliveFuture();
+            m_isAliveMap.put(socketPort, future);
+            sendToSocket(m_socket, SEND_IS_PROCESS_ALIVE, socketPort);
+            return future.get();
+        } catch (final IOException | InterruptedException | ExecutionException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    void destroy(final int socketPort) {
+        try {
+            sendToSocket(m_socket, SEND_DESTROY_PROCESS, socketPort);
+        } catch (final IOException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     private void startSocketListening() {
@@ -109,11 +147,11 @@ public class PythonParentProcess implements AutoCloseable {
         // TODO constants for commands
         final PythonProcess process = m_subProcesses.get(processId);
         switch (command) {
-            case 0:
-                process.setIsAlive(val == 1);
+            case RECEIVE_IS_ALIVE:
+                m_isAliveMap.get(processId).setIsAlive(val == 1);
                 break;
-            case 1:
-                process.setExitValue(val);
+            case RECEIVE_EXIT_VALUE:
+                // TODO do something with the exit value
                 break;
             default:
                 throw new IllegalStateException("Unknown command: " + command);
@@ -127,4 +165,22 @@ public class PythonParentProcess implements AutoCloseable {
         m_serverSocket.close();
         m_socket.close();
     }
+
+    /** Send the given integers on the given socket */
+    private static void sendToSocket(final Socket socket, final int... values) throws IOException {
+        final OutputStream outputStream = socket.getOutputStream();
+        final ByteBuffer data = ByteBuffer.allocate(values.length * 4).order(ByteOrder.BIG_ENDIAN);
+        for (final int v : values) {
+            data.putInt(v);
+        }
+        outputStream.write(data.array());
+        outputStream.flush();
+    }
+
+    private static class IsAliveFuture extends CompletableFuture<Boolean> {
+        void setIsAlive(final boolean isAlive) {
+            complete(isAlive);
+        }
+    }
+
 }

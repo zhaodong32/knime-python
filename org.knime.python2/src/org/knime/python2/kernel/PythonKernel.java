@@ -127,7 +127,6 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.impl.RowImpl
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.TableSpecImpl;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.TemporaryTableCreator;
 import org.knime.python2.generic.ImageContainer;
-import org.knime.python2.kernel.PythonProcessCreator.PythonProcess;
 import org.knime.python2.kernel.messaging.AbstractRequestHandler;
 import org.knime.python2.kernel.messaging.DefaultMessage;
 import org.knime.python2.kernel.messaging.DefaultMessage.PayloadDecoder;

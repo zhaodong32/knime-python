@@ -50,7 +50,6 @@ package org.knime.python2.kernel;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Socket;
 
 /**
  * @author Benjamin Wilhelm, KNIME GmbH, Konstanz, Germany
@@ -65,17 +64,15 @@ public class PythonProcess {
         }
     };
 
-    private final Socket m_parentSocket;
-
     private final int m_socketPort;
 
-    private boolean m_isAlive;
+    private final PythonParentProcess m_parentProcess;
 
-    private int m_exitValue;
+    private int m_exitValue = 0;
 
-    public PythonProcess(final int socketPort, final Socket parentSocket) {
+    public PythonProcess(final int socketPort, final PythonParentProcess parentProcess) {
         m_socketPort = socketPort;
-        m_parentSocket = parentSocket;
+        m_parentProcess = parentProcess;
     }
 
     public InputStream getInputStream() {
@@ -87,36 +84,15 @@ public class PythonProcess {
     }
 
     public boolean isAlive() {
-        try {
-            sendToSocket(m_parentSocket, IS_PROCESS_ALIVE, m_socketPort);
-            final int processPort = reciveOnSocket(m_parentSocket);
-            //                if (processPort != m_socketPort) {
-            //                    throw new IllegalStateException("Got message for another process");
-            //                }
-            final int is_alive = reciveOnSocket(m_parentSocket);
-            return is_alive == 1;
-        } catch (final Exception ex) {
-            throw new IllegalStateException(ex);
-        }
+        return m_parentProcess.isAlive(m_socketPort);
     }
 
     public void destroy() {
-        try {
-            sendToSocket(m_parentSocket, DESTROY_PROCESS, m_socketPort);
-        } catch (final IOException ex) {
-            throw new IllegalStateException(ex);
-        }
+        m_parentProcess.destroy(m_socketPort);
     }
 
     public int exitValue() {
+        // TODO ask the parent for the exit value
         return m_exitValue;
-    }
-
-    void setExitValue(final int exitValue) {
-        m_exitValue = exitValue;
-    }
-
-    void setIsAlive(final boolean isAlive) {
-        m_isAlive = isAlive;
     }
 }

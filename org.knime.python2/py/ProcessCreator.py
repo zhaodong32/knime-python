@@ -56,9 +56,10 @@ import os
 from multiprocessing import Process
 from PythonKernelLauncher import launch_python_kernel
 
-CREATE_PROCESS = 0
-IS_PROCESS_ALIVE = 1
-DESTROY_PROCESS = 2
+RECEIVE_CREATE_PROCESS = 0
+RECEIVE_IS_PROCESS_ALIVE = 1
+RECEIVE_DESTROY_PROCESS = 2
+SEND_IS_ALIVE = 0
 
 def main(socket_port, serialization_lib):
 
@@ -84,16 +85,16 @@ def main(socket_port, serialization_lib):
             command = struct.unpack('>i', data[0:4])[0]
             process_port = struct.unpack('>i', data[4:8])[0]
             print('Recived message. Command ' + str(command) + ', Process port: ' + str(process_port))
-            if command == CREATE_PROCESS:
+            if command == RECEIVE_CREATE_PROCESS:
                 processes[process_port] = launch_new_process(process_port, serialization_lib)
                 print('Process created')
-            elif command == IS_PROCESS_ALIVE:
+            elif command == RECEIVE_IS_PROCESS_ALIVE:
                 is_alive = processes[process_port].is_alive()
                 print('Process alive: ' + str(is_alive))
-                data = struct.pack('>i', process_port, int(is_alive))
+                data = struct.pack('>i', SEND_IS_ALIVE, process_port, int(is_alive))
                 print('Sending reply ' + data)
                 connection.sendall(data)
-            elif command == DESTROY_PROCESS:
+            elif command == RECEIVE_DESTROY_PROCESS:
                 processes[process_port].terminate()
                 print('Process terminated')
 

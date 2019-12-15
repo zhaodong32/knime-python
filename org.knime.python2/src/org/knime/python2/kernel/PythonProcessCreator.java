@@ -49,12 +49,8 @@
 package org.knime.python2.kernel;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,12 +72,6 @@ public class PythonProcessCreator {
 
     private static final String PROCESS_CREATOR_PATH =
         Activator.getFile(Activator.PLUGIN_ID, PROCESS_CREATOR_RELATIVE_PATH).getAbsolutePath();
-
-    private static final int CREATE_PROCESS = 0;
-
-    private static final int IS_PROCESS_ALIVE = 1;
-
-    private static final int DESTROY_PROCESS = 2;
 
     private static PythonProcessCreator instance;
 
@@ -124,6 +114,7 @@ public class PythonProcessCreator {
         return m_processes.get(options);
     }
 
+    // TODO move to PythonParentProcess?
     private static PythonParentProcess setupParentProcess(final PythonKernelOptions options) {
         try {
             // Open the socket for communication
@@ -180,14 +171,4 @@ public class PythonProcessCreator {
         return Executors.newSingleThreadExecutor().submit(serverSocket::accept);
     }
 
-    /** Send the given integers on the given socket */
-    private static void sendToSocket(final Socket socket, final int... values) throws IOException {
-        final OutputStream outputStream = socket.getOutputStream();
-        final ByteBuffer data = ByteBuffer.allocate(values.length * 4).order(ByteOrder.BIG_ENDIAN);
-        for (final int v : values) {
-            data.putInt(v);
-        }
-        outputStream.write(data.array());
-        outputStream.flush();
-    }
 }
