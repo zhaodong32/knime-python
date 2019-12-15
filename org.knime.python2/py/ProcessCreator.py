@@ -54,6 +54,7 @@ import socket
 import struct
 import os
 from multiprocessing import Process
+from datetime import datetime
 from PythonKernelLauncher import launch_python_kernel
 
 RECEIVE_CREATE_PROCESS = 0
@@ -69,8 +70,11 @@ def main(socket_port, serialization_lib):
     import debug_util
     debug_util.init_debug(enable_breakpoints=True, enable_debug_log=True, debug_log_to_stderr=False)
 
+    # Setup logging
+    f = setup_log_file()
+
     processes = {}
-    print('Parent process started at port ' + str(socket_port))
+    log_to_file(f, 'Parent process started at port ' + str(socket_port))
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as connection:
         connection.connect(('127.0.0.1', socket_port))
@@ -84,22 +88,34 @@ def main(socket_port, serialization_lib):
                 buffer.extend(data)
             command = struct.unpack('>i', data[0:4])[0]
             process_port = struct.unpack('>i', data[4:8])[0]
-            print('Recived message. Command ' + str(command) + ', Process port: ' + str(process_port))
+            log_to_file(f, 'Recived message. Command ' + str(command) + ', Process port: ' + str(process_port))
             if command == RECEIVE_CREATE_PROCESS:
                 processes[process_port] = launch_new_process(process_port, serialization_lib)
-                print('Process created')
+                log_to_file(f, 'Process created')
             elif command == RECEIVE_IS_PROCESS_ALIVE:
                 is_alive = processes[process_port].is_alive()
-                print('Process alive: ' + str(is_alive))
+                log_to_file(f, 'Process alive: ' + str(is_alive))
                 data = struct.pack('>i', SEND_IS_ALIVE, process_port, int(is_alive))
-                print('Sending reply ' + data)
+                log_to_file(f, 'Sending reply ' + data)
                 connection.sendall(data)
             elif command == RECEIVE_DESTROY_PROCESS:
                 processes[process_port].terminate()
-                print('Process terminated')
+                log_to_file(f, 'Process terminated')
 
+    f.close()
     return
 
+def setup_log_file():
+    return open('/tmp/python.log', 'a')
+
+def log_to_file(f, text):
+    f.write(current_time() + "> " + text + "\n")
+    f.flush()
+    return
+
+def current_time():
+    now = datetime.now()
+    return now.strftime("%H:%M:%S.%f")
 
 def launch_new_process(process_port, serialization_lib):
     process = Process(target=launch_python_kernel, args=(process_port, serialization_lib))
