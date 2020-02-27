@@ -124,7 +124,7 @@ public final class CondaEnvironmentsConfig implements PythonEnvironmentsConfig {
         try {
             final String userHome = System.getProperty("user.home");
             if (userHome != null) {
-                return Paths.get(userHome, "anaconda3").toString();
+                return Paths.get(userHome, "python/anaconda").toString();
             }
         } catch (final Exception ex) {
             // Ignore and continue with fallback.
