@@ -49,11 +49,9 @@
 package org.knime.python2.serde.arrow.extractors;
 
 import org.apache.arrow.vector.IntVector;
+import org.knime.core.data.convert.map.MappingException;
+import org.knime.core.data.convert.map.experimental.IntCellValueProducerNoSource;
 import org.knime.python2.extensions.serializationlibrary.SerializationOptions;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Type;
-import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
 
 /**
  * Manages the data transfer between the arrow table format and the python table format. Works on Integer vectors.
@@ -62,11 +60,13 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImp
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public class IntegerExtractor implements VectorExtractor {
+public class IntegerExtractor implements IntCellValueProducerNoSource {
 
     private final IntVector m_vector;
 
-    private final SerializationOptions m_serializationOptions;
+    private final boolean m_convertSentinel;
+
+    private final int m_sentinel;
 
     private int m_ctr;
 
@@ -74,32 +74,21 @@ public class IntegerExtractor implements VectorExtractor {
      * Constructor.
      *
      * @param vector the vector to extract from
-     * @param opts additional serialization options
+     * @param options additional serialization options
      */
-    public IntegerExtractor(final IntVector vector, final SerializationOptions opts) {
+    public IntegerExtractor(final IntVector vector, final SerializationOptions options) {
         m_vector = vector;
-        m_serializationOptions = opts;
+        m_convertSentinel = options.getConvertMissingFromPython();
+        m_sentinel = options.getIntSentinelValue();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public Cell extract() {
-        Cell c;
-        if (m_vector.isNull(m_ctr)) {
-            c = new CellImpl();
-        } else {
-            int val = m_vector.get(m_ctr);
-            if (m_serializationOptions.getConvertMissingFromPython()
-                && m_serializationOptions.isSentinel(Type.INTEGER, val)) {
-                c = new CellImpl();
-            } else {
-                c = new CellImpl(val);
-            }
-        }
-        m_ctr++;
-        return c;
+    public boolean producesMissingCellValue() throws MappingException {
+        return m_vector.isNull(m_ctr) || (m_convertSentinel && m_vector.get(m_ctr) == m_sentinel);
     }
 
+    @Override
+    public int produceIntCellValue() throws MappingException {
+        return m_vector.get(m_ctr++);
+    }
 }

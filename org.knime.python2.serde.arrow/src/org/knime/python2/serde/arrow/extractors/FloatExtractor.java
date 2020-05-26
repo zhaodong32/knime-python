@@ -49,19 +49,18 @@
 package org.knime.python2.serde.arrow.extractors;
 
 import org.apache.arrow.vector.Float4Vector;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
+import org.knime.core.data.convert.map.MappingException;
+import org.knime.core.data.convert.map.experimental.FloatCellValueProducerNoSource;
 
 /**
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public final class FloatExtractor implements VectorExtractor {
+public final class FloatExtractor implements FloatCellValueProducerNoSource {
 
     private final Float4Vector m_vector;
 
-    private int m_nextCellIndex = 0;
+    private int m_ctr = 0;
 
     /**
      * @param vector the vector from which to extract float cells
@@ -70,12 +69,20 @@ public final class FloatExtractor implements VectorExtractor {
         m_vector = vector;
     }
 
+    /**
+     * We report no missing values but return NaNs in {@link #produceFloatCellValue()} instead.
+     */
     @Override
-    public Cell extract() {
-        final Cell cell = m_vector.isNull(m_nextCellIndex) //
-            ? new CellImpl(Float.NaN) //
-            : new CellImpl(m_vector.get(m_nextCellIndex));
-        m_nextCellIndex++;
-        return cell;
+    public boolean producesMissingCellValue() throws MappingException {
+        return false;
+    }
+
+    @Override
+    public float produceFloatCellValue() throws MappingException {
+        final float value = m_vector.isNull(m_ctr) //
+            ? Float.NaN //
+            : m_vector.get(m_ctr);
+        m_ctr++;
+        return value;
     }
 }

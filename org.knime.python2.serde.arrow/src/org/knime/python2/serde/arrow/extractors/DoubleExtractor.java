@@ -49,9 +49,8 @@
 package org.knime.python2.serde.arrow.extractors;
 
 import org.apache.arrow.vector.Float8Vector;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
+import org.knime.core.data.convert.map.MappingException;
+import org.knime.core.data.convert.map.experimental.DoubleCellValueProducerNoSource;
 
 /**
  * Manages the data transfer between the arrow table format and the python table format. Works on Double vectors.
@@ -60,7 +59,7 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImp
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public class DoubleExtractor implements VectorExtractor {
+public class DoubleExtractor implements DoubleCellValueProducerNoSource {
 
     private final Float8Vector m_vector;
 
@@ -76,18 +75,19 @@ public class DoubleExtractor implements VectorExtractor {
     }
 
     /**
-     * {@inheritDoc}
+     * We report no missing values but return NaNs in {@link #produceDoubleCellValue()} instead.
      */
     @Override
-    public Cell extract() {
-        Cell c;
-        if (m_vector.isNull(m_ctr)) {
-            c = new CellImpl(Double.NaN);
-        } else {
-            c = new CellImpl(m_vector.get(m_ctr));
-        }
-        m_ctr++;
-        return c;
+    public boolean producesMissingCellValue() throws MappingException {
+        return false;
     }
 
+    @Override
+    public double produceDoubleCellValue() throws MappingException {
+        final double value = m_vector.isNull(m_ctr) //
+            ? Double.NaN //
+            : m_vector.get(m_ctr);
+        m_ctr++;
+        return value;
+    }
 }

@@ -50,7 +50,6 @@ import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.FieldVector;
 import org.knime.python2.extensions.serializationlibrary.SerializationOptions;
 import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Type;
 
 /**
  * Manages the data transfer between the python table format and the arrow table format. Works on Long cells.
@@ -83,7 +82,7 @@ public class LongInserter implements ArrowVectorInserter {
         m_vec = new BigIntVector(name, allocator);
         m_vec.allocateNew(numRows);
         m_serializationOptions = serializationOptions;
-        m_longSentinel = m_serializationOptions.getSentinelForType(Type.LONG);
+        m_longSentinel = m_serializationOptions.getLongSentinelValue();
     }
 
     @Override

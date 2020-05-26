@@ -48,9 +48,7 @@
  */
 package org.knime.python2.serde.arrow.extractors;
 
-import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
+import org.knime.core.data.convert.map.experimental.CellValueProducerNoSource;
 
 /**
  * Utility extractor that always returns a Cell wrapping a MissingValue.
@@ -59,16 +57,14 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImp
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public class MissingExtractor implements VectorExtractor {
+public final class MissingExtractor implements CellValueProducerNoSource<Void> {
 
-    private Cell missingCell = new CellImpl();
+    public static final MissingExtractor INSTANCE = new MissingExtractor();
 
-    /**
-     * {@inheritDoc}
-     */
+    private MissingExtractor() {}
+
     @Override
-    public Cell extract() {
-        return missingCell;
+    public Void produceCellValue() {
+        return null;
     }
-
 }

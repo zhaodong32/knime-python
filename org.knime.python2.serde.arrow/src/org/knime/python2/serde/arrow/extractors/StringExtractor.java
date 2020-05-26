@@ -49,44 +49,37 @@
 package org.knime.python2.serde.arrow.extractors;
 
 import org.apache.arrow.vector.VarCharVector;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
+import org.knime.core.data.convert.map.MappingException;
+import org.knime.core.data.convert.map.experimental.CellValueProducerNoSource;
 
 /**
- * Manages the data transfer between the arrow table format and the python table format.
- * Works on String vectors.
+ * Manages the data transfer between the arrow table format and the python table format. Works on String vectors.
  *
  * @author Clemens von Schwerin, KNIME GmbH, Konstanz, Germany
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public class StringExtractor implements VectorExtractor {
+public class StringExtractor implements CellValueProducerNoSource<String> {
 
     private final VarCharVector m_vector;
+
     private int m_ctr;
 
     /**
      * Constructor.
+     *
      * @param vector the vector to extract from
      */
     public StringExtractor(final VarCharVector vector) {
         m_vector = vector;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public Cell extract() {
-        Cell c;
-        if(m_vector.isNull(m_ctr)) {
-            c = new CellImpl();
-        } else {
-            c = new CellImpl(m_vector.getObject(m_ctr).toString());
-        }
+    public String produceCellValue() throws MappingException {
+        final String value = m_vector.isNull(m_ctr) //
+            ? null //
+            : m_vector.getObject(m_ctr).toString();
         m_ctr++;
-        return c;
+        return value;
     }
-
 }

@@ -83,6 +83,11 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.util.OversizedAllocationException;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.knime.core.data.convert.map.MappingException;
+import org.knime.core.data.convert.map.experimental.CellValueProducerNoSource;
+import org.knime.core.data.convert.map.experimental.Mappers;
+import org.knime.core.data.convert.map.experimental.Mappers.Mapper;
+import org.knime.core.data.convert.map.experimental.RowConsumer;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.FileUtil;
 import org.knime.python2.extensions.serializationlibrary.SerializationException;
@@ -93,36 +98,20 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.TableCreator
 import org.knime.python2.extensions.serializationlibrary.interfaces.TableIterator;
 import org.knime.python2.extensions.serializationlibrary.interfaces.TableSpec;
 import org.knime.python2.extensions.serializationlibrary.interfaces.Type;
-import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.RowImpl;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.TableSpecImpl;
 import org.knime.python2.kernel.PythonCancelable;
 import org.knime.python2.kernel.PythonCanceledExecutionException;
 import org.knime.python2.kernel.PythonIOException;
 import org.knime.python2.serde.arrow.ReadContextManager.ReadContext;
 import org.knime.python2.serde.arrow.extractors.BooleanExtractor;
-import org.knime.python2.serde.arrow.extractors.BooleanListExtractor;
-import org.knime.python2.serde.arrow.extractors.BooleanSetExtractor;
-import org.knime.python2.serde.arrow.extractors.BytesExtractor;
-import org.knime.python2.serde.arrow.extractors.BytesListExtractor;
-import org.knime.python2.serde.arrow.extractors.BytesSetExtractor;
 import org.knime.python2.serde.arrow.extractors.DoubleExtractor;
-import org.knime.python2.serde.arrow.extractors.DoubleListExtractor;
-import org.knime.python2.serde.arrow.extractors.DoubleSetExtractor;
 import org.knime.python2.serde.arrow.extractors.FloatExtractor;
-import org.knime.python2.serde.arrow.extractors.FloatListExtractor;
-import org.knime.python2.serde.arrow.extractors.FloatSetExtractor;
-import org.knime.python2.serde.arrow.extractors.IntListExtractor;
-import org.knime.python2.serde.arrow.extractors.IntSetExtractor;
 import org.knime.python2.serde.arrow.extractors.IntegerExtractor;
 import org.knime.python2.serde.arrow.extractors.LongExtractor;
-import org.knime.python2.serde.arrow.extractors.LongListExtractor;
-import org.knime.python2.serde.arrow.extractors.LongSetExtractor;
 import org.knime.python2.serde.arrow.extractors.MissingExtractor;
 import org.knime.python2.serde.arrow.extractors.StringExtractor;
-import org.knime.python2.serde.arrow.extractors.StringListExtractor;
-import org.knime.python2.serde.arrow.extractors.StringSetExtractor;
+import org.knime.python2.serde.arrow.extractors.StringFromBytesExtractor;
 import org.knime.python2.serde.arrow.inserters.ArrowVectorInserter;
 import org.knime.python2.serde.arrow.inserters.BooleanInserter;
 import org.knime.python2.serde.arrow.inserters.BooleanListInserter;
@@ -464,19 +453,17 @@ public class ArrowSerializationLibrary implements SerializationLibrary {
                 PythonUtils.Misc.invokeSafely(null, ArrowVectorInserter::close, inserters);
             }
         }
-        return path.getBytes("UTF-8");
-    }
-
-    private static VectorExtractor getStringOrByteExtractor(final FieldVector vec) {
-        if (vec instanceof VarCharVector) {
-            return new StringExtractor((VarCharVector)vec);
-        } else {
-            return new BytesExtractor((VarBinaryVector)vec, true);
-        }
+        return path.getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
-    public void bytesIntoTable(final TableCreator<?> tableCreator, final byte[] bytes,
+    public void bytesIntoTable(final TableCreator tableCreator, final byte[] bytes,
+        final SerializationOptions serializationOptions, final PythonCancelable cancelable)
+        throws SerializationException, PythonCanceledExecutionException {
+        throw new IllegalStateException("Use experimental deserialization instead.");
+    }
+
+    public void bytesIntoTable(final RowConsumer rowConsumer, final byte[] bytes,
         final SerializationOptions serializationOptions, final PythonCancelable cancelable)
         throws SerializationException, PythonCanceledExecutionException {
         File file = null;
@@ -485,7 +472,7 @@ public class ArrowSerializationLibrary implements SerializationLibrary {
             final File finalFile = file;
             final TableSpec spec = tableSpecFromBytes(bytes, cancelable);
             PythonUtils.Misc.executeCancelable(() -> {
-                bytesIntoTableInternal(tableCreator, serializationOptions, spec, finalFile);
+                bytesIntoTableInternal(rowConsumer, serializationOptions, spec, finalFile);
                 return null;
             }, m_executorService, cancelable);
         } catch (final PythonIOException e) {
@@ -503,93 +490,102 @@ public class ArrowSerializationLibrary implements SerializationLibrary {
     /**
      * Possibly interrupted by {@link #bytesIntoTable(TableCreator, byte[], SerializationOptions, PythonCancelable)}.
      */
-    private void bytesIntoTableInternal(final TableCreator<?> tableCreator,
-        final SerializationOptions serializationOptions, final TableSpec spec, final File file) throws IOException {
+    private void bytesIntoTableInternal(final RowConsumer rowConsumer, final SerializationOptions serializationOptions,
+        final TableSpec spec, final File file) throws IOException {
         try (ArrowStreamReader reader = ReadContextManager.createForFile(file).getReader()) {
             final VectorSchemaRoot root = reader.getVectorSchemaRoot(); // Will be closed by reader.
             final Type[] types = spec.getColumnTypes();
             final String[] names = spec.getColumnNames();
 
-            final List<VectorExtractor> extractors = new ArrayList<>();
+            final int numColumns = spec.getNumberColumns();
+            final Mappers.Mapper[] mappers = new Mappers.Mapper[1 + spec.getNumberColumns()];
             // Index is always string.
-            extractors.add(getStringOrByteExtractor(root.getVector(m_indexColumnName)));
+            final CellValueProducerNoSource<String> rowKeyExtractor =
+                getStringExtractorForVector(root.getVector(m_indexColumnName));
+            mappers[0] = Mappers.createMapper(rowKeyExtractor, rowConsumer.getRowKeyConsumer());
 
             // Setup an extractor for every column.
-            for (int j = 0; j < spec.getNumberColumns(); j++) {
+            for (int j = 0; j < numColumns; j++) {
+                final CellValueProducerNoSource<?> extractor;
                 if (ArrayUtils.contains(m_missingColumnNames, names[j])) {
-                    extractors.add(new MissingExtractor());
+                    extractor = MissingExtractor.INSTANCE;
                 } else {
                     switch (types[j]) {
                         case BOOLEAN:
-                            extractors.add(new BooleanExtractor((BitVector)root.getVector(names[j])));
+                            extractor = new BooleanExtractor((BitVector)root.getVector(names[j]));
                             break;
                         case INTEGER:
-                            extractors
-                                .add(new IntegerExtractor((IntVector)root.getVector(names[j]), serializationOptions));
+                            extractor = new IntegerExtractor((IntVector)root.getVector(names[j]), serializationOptions);
                             break;
                         case LONG:
-                            extractors
-                                .add(new LongExtractor((BigIntVector)root.getVector(names[j]), serializationOptions));
+                            extractor = new LongExtractor((BigIntVector)root.getVector(names[j]), serializationOptions);
                             break;
                         case DOUBLE:
-                            extractors.add(new DoubleExtractor((Float8Vector)root.getVector(names[j])));
+                            extractor = new DoubleExtractor((Float8Vector)root.getVector(names[j]));
                             break;
                         case FLOAT:
-                            extractors.add(new FloatExtractor((Float4Vector)root.getVector(names[j])));
+                            extractor = new FloatExtractor((Float4Vector)root.getVector(names[j]));
                             break;
                         case STRING:
-                            extractors.add(getStringOrByteExtractor(root.getVector(names[j])));
+                            extractor = getStringExtractorForVector(root.getVector(names[j]));
                             break;
-                        case BYTES:
-                            extractors.add(new BytesExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case INTEGER_LIST:
-                            extractors.add(new IntListExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case INTEGER_SET:
-                            extractors.add(new IntSetExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case LONG_LIST:
-                            extractors.add(new LongListExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case LONG_SET:
-                            extractors.add(new LongSetExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case DOUBLE_LIST:
-                            extractors.add(new DoubleListExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case DOUBLE_SET:
-                            extractors.add(new DoubleSetExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case FLOAT_LIST:
-                            extractors.add(new FloatListExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case FLOAT_SET:
-                            extractors.add(new FloatSetExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case BOOLEAN_LIST:
-                            extractors.add(new BooleanListExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case BOOLEAN_SET:
-                            extractors.add(new BooleanSetExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case STRING_LIST:
-                            extractors.add(new StringListExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case STRING_SET:
-                            extractors.add(new StringSetExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case BYTES_LIST:
-                            extractors.add(new BytesListExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
-                        case BYTES_SET:
-                            extractors.add(new BytesSetExtractor((VarBinaryVector)root.getVector(names[j])));
-                            break;
+                        // TODO: Implement once fast tables support collections and extension types.
+                        //case BYTES:
+                        //    extractor = new BytesExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case INTEGER_LIST:
+                        //    extractor = new IntListExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case INTEGER_SET:
+                        //    extractor = new IntSetExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case LONG_LIST:
+                        //    extractor = new LongListExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case LONG_SET:
+                        //    extractor = new LongSetExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case DOUBLE_LIST:
+                        //    extractor = new DoubleListExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case DOUBLE_SET:
+                        //    extractor = new DoubleSetExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case FLOAT_LIST:
+                        //    extractor = new FloatListExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case FLOAT_SET:
+                        //    extractor = new FloatSetExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case BOOLEAN_LIST:
+                        //    extractor = new BooleanListExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case BOOLEAN_SET:
+                        //    extractor = new BooleanSetExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case STRING_LIST:
+                        //    extractor = new StringListExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case STRING_SET:
+                        //    extractor = new StringSetExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case BYTES_LIST:
+                        //    extractor = new BytesListExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
+                        //case BYTES_SET:
+                        //    extractor = new BytesSetExtractor((VarBinaryVector)root.getVector(names[j]));
+                        //    break;
                         default:
                             throw new IllegalStateException("Deserialization is not implemented for type: " + types[j]);
                     }
+                    // TODO: this is where the Arrow and Java data types collide.
+                    // There is probably no way to statically ensure type safety?!
+                    final Mapper mapper =
+                        Mappers.createMapper((CellValueProducerNoSource)extractor, rowConsumer.getColumnConsumer(j));
+                    mappers[1 + j] = mapper;
                 }
             }
+
             // Extract each value as a Cell, collate the cells to Rows and add the rows to the table creator for
             // further processing
             for (int i = 0; i < root.getRowCount(); i++) {
@@ -597,12 +593,23 @@ public class ArrowSerializationLibrary implements SerializationLibrary {
                     // Stop deserialization if canceled by client.
                     throw new CancellationException("Deserialization canceled by client.");
                 }
-                final Row row = new RowImpl(extractors.get(0).extract().getStringValue(), spec.getNumberColumns());
-                for (int j = 0; j < spec.getNumberColumns(); j++) {
-                    row.setCell(extractors.get(j + 1).extract(), j);
+                for (int j = 0; j < 1 + numColumns; j++) {
+                    try {
+                        mappers[j].map();
+                    } catch (MappingException ex) {
+                        throw new IOException(ex);
+                    }
                 }
-                tableCreator.addRow(row);
+                rowConsumer.advanceToNextRow();
             }
+        }
+    }
+
+    private static CellValueProducerNoSource<String> getStringExtractorForVector(final FieldVector vec) {
+        if (vec instanceof VarCharVector) {
+            return new StringExtractor((VarCharVector)vec);
+        } else {
+            return new StringFromBytesExtractor((VarBinaryVector)vec);
         }
     }
 

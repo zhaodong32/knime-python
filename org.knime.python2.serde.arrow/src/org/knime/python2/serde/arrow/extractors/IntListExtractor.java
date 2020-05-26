@@ -56,8 +56,7 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
 
 /**
- * Manages the data transfer between the arrow table format and the python table format.
- * Works on Integer list vectors.
+ * Manages the data transfer between the arrow table format and the python table format. Works on Integer list vectors.
  *
  * @author Clemens von Schwerin, KNIME GmbH, Konstanz, Germany
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
@@ -67,17 +66,10 @@ public class IntListExtractor extends ListExtractor {
 
     private int[] m_primitives;
 
-    /**
-     * Constructor.
-     * @param vector the vector to extract from
-     */
     public IntListExtractor(final VarBinaryVector vector) {
-       super(vector);
+        super(vector);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void fillInternalArray(final ByteBuffer buffer, final int numVals) {
         IntBuffer ibuffer = buffer.asIntBuffer();
@@ -85,20 +77,13 @@ public class IntListExtractor extends ListExtractor {
         ibuffer.get(m_primitives);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Cell getReturnValue(final byte[] missings) {
         return new CellImpl(m_primitives, missings);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected int getValuesLength() {
         return 4 * m_primitives.length;
     }
-
 }

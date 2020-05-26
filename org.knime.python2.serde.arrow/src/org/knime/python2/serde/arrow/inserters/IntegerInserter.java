@@ -50,7 +50,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.IntVector;
 import org.knime.python2.extensions.serializationlibrary.SerializationOptions;
 import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Type;
 
 /**
  * Manages the data transfer between the python table format and the arrow table format. Works on Integer cells.
@@ -83,7 +82,7 @@ public class IntegerInserter implements ArrowVectorInserter {
         m_vec = new IntVector(name, allocator);
         m_vec.allocateNew(numRows);
         m_serializationOptions = serializationOptions;
-        m_intSentinel = (int)m_serializationOptions.getSentinelForType(Type.INTEGER);
+        m_intSentinel = m_serializationOptions.getIntSentinelValue();
     }
 
     @Override

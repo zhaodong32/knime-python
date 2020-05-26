@@ -49,55 +49,46 @@
 package org.knime.python2.serde.arrow.extractors;
 
 import org.apache.arrow.vector.BigIntVector;
+import org.knime.core.data.convert.map.MappingException;
+import org.knime.core.data.convert.map.experimental.LongCellValueProducerNoSource;
 import org.knime.python2.extensions.serializationlibrary.SerializationOptions;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Type;
-import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
 
 /**
- * Manages the data transfer between the arrow table format and the python table format.
- * Works on Long vectors.
+ * Manages the data transfer between the arrow table format and the python table format. Works on Long vectors.
  *
  * @author Clemens von Schwerin, KNIME GmbH, Konstanz, Germany
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public class LongExtractor implements VectorExtractor {
+public class LongExtractor implements LongCellValueProducerNoSource {
 
     private final BigIntVector m_vector;
-    private final SerializationOptions m_serializationOptions;
+
+    private final boolean m_convertSentinel;
+
+    private final long m_sentinel;
+
     private int m_ctr;
 
     /**
      * Constructor.
+     *
      * @param vector the vector to extract from
-     * @param opts additional serialization options
+     * @param options additional serialization options
      */
-    public LongExtractor(final BigIntVector vector, final SerializationOptions opts) {
+    public LongExtractor(final BigIntVector vector, final SerializationOptions options) {
         m_vector = vector;
-        m_serializationOptions = opts;
+        m_convertSentinel = options.getConvertMissingFromPython();
+        m_sentinel = options.getLongSentinelValue();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public Cell extract() {
-        Cell c;
-        if(m_vector.isNull(m_ctr)) {
-            c = new CellImpl();
-        } else {
-            long val = m_vector.get(m_ctr);
-            if (m_serializationOptions.getConvertMissingFromPython()
-                    && m_serializationOptions.isSentinel(Type.LONG, val)) {
-                c = new CellImpl();
-            } else {
-                c = new CellImpl(val);
-            }
-        }
-        m_ctr++;
-        return c;
+    public boolean producesMissingCellValue() throws MappingException {
+        return m_vector.isNull(m_ctr) || (m_convertSentinel && m_vector.get(m_ctr) == m_sentinel);
     }
 
+    @Override
+    public long produceLongCellValue() throws MappingException {
+        return m_vector.get(m_ctr++);
+    }
 }

@@ -48,20 +48,22 @@
  */
 package org.knime.python2.serde.arrow.extractors;
 
-import org.apache.arrow.vector.BitVector;
+import java.nio.charset.StandardCharsets;
+
+import org.apache.arrow.vector.VarBinaryVector;
 import org.knime.core.data.convert.map.MappingException;
-import org.knime.core.data.convert.map.experimental.BooleanCellValueProducerNoSource;
+import org.knime.core.data.convert.map.experimental.CellValueProducerNoSource;
 
 /**
- * Manages the data transfer between the arrow table format and the python table format. Works on Boolean vectors.
+ * Manages the data transfer between the arrow table format and the python table format. Works on byte[] vectors.
  *
  * @author Clemens von Schwerin, KNIME GmbH, Konstanz, Germany
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public class BooleanExtractor implements BooleanCellValueProducerNoSource {
+public class StringFromBytesExtractor implements CellValueProducerNoSource<String> {
 
-    private final BitVector m_vector;
+    private final VarBinaryVector m_vector;
 
     private int m_ctr;
 
@@ -70,17 +72,16 @@ public class BooleanExtractor implements BooleanCellValueProducerNoSource {
      *
      * @param vector the vector to extract from
      */
-    public BooleanExtractor(final BitVector vector) {
+    public StringFromBytesExtractor(final VarBinaryVector vector) {
         m_vector = vector;
     }
 
     @Override
-    public boolean producesMissingCellValue() throws MappingException {
-        return m_vector.isNull(m_ctr);
-    }
-
-    @Override
-    public boolean produceBooleanCellValue() throws MappingException {
-        return m_vector.get(m_ctr++) > 0;
+    public String produceCellValue() throws MappingException {
+        final String value = m_vector.isNull(m_ctr) //
+            ? null //
+            : new String(m_vector.getObject(m_ctr), StandardCharsets.UTF_8);
+        m_ctr++;
+        return value;
     }
 }
