@@ -87,7 +87,7 @@ public class LongInserter implements FlatbuffersVectorInserter {
     public void put(final Cell cell) {
         if(cell.isMissing()) {
             if(m_serializationOptions.getConvertMissingToPython()) {
-                m_values[m_ctr] = m_serializationOptions.getSentinelForType(Type.LONG);
+                m_values[m_ctr] = m_serializationOptions.getLongSentinelValue();
             } else {
                 m_missings[m_ctr] = true;
             }

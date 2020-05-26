@@ -175,8 +175,10 @@ public class CsvSerializationLibrary implements SerializationLibrary {
                         value = "MissingCell";
                         final Type type = spec.getColumnTypes()[ctr];
                         if (serializationOptions.getConvertMissingToPython()
-                            && ((type == Type.INTEGER) || (type == Type.LONG))) {
-                            value = Long.toString(serializationOptions.getSentinelForType(type));
+                            && (type == Type.INTEGER || type == Type.LONG)) {
+                            value = Long.toString(type == Type.INTEGER //
+                                ? serializationOptions.getIntSentinelValue() //
+                                : serializationOptions.getLongSentinelValue());
                         }
                     } else {
                         final Type type = cell.getColumnType();
@@ -528,7 +530,7 @@ public class CsvSerializationLibrary implements SerializationLibrary {
                             case INTEGER:
                                 final int intVal = Integer.parseInt(value);
                                 if (serializationOptions.getConvertMissingFromPython()
-                                    && serializationOptions.isSentinel(Type.INTEGER, intVal)) {
+                                    && intVal == serializationOptions.getIntSentinelValue()) {
                                     cell = new CellImpl();
                                 } else {
                                     cell = new CellImpl(intVal);
@@ -572,7 +574,7 @@ public class CsvSerializationLibrary implements SerializationLibrary {
                             case LONG:
                                 final long longVal = Long.parseLong(value.replace("L", ""));
                                 if (serializationOptions.getConvertMissingFromPython()
-                                    && serializationOptions.isSentinel(Type.LONG, longVal)) {
+                                    && longVal == serializationOptions.getLongSentinelValue()) {
                                     cell = new CellImpl();
                                 } else {
                                     cell = new CellImpl(longVal);

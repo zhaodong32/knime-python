@@ -87,7 +87,7 @@ public class IntInserter implements FlatbuffersVectorInserter {
     public void put(final Cell cell) {
         if(cell.isMissing()) {
             if(m_serializationOptions.getConvertMissingToPython()) {
-                m_values[m_ctr] = (int) m_serializationOptions.getSentinelForType(Type.INTEGER);
+                m_values[m_ctr] = m_serializationOptions.getIntSentinelValue();
             } else {
                 m_missings[m_ctr] = true;
             }

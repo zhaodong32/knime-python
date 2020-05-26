@@ -50,7 +50,6 @@ package org.knime.python2.serde.flatbuffers.extractors;
 
 import org.knime.python2.extensions.serializationlibrary.SerializationOptions;
 import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Type;
 import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
 import org.knime.python2.serde.flatbuffers.flatc.IntColumn;
@@ -85,12 +84,12 @@ public class IntExtractor implements VectorExtractor {
     @Override
     public Cell extract() {
         Cell c;
-        //int cannot be missing in pandas dataframe
+        final int value = m_colVec.values(m_ctr);
         if (m_serializationOptions.getConvertMissingFromPython()
-            && m_serializationOptions.isSentinel(Type.INTEGER, m_colVec.values(m_ctr))) {
+            && value == m_serializationOptions.getIntSentinelValue()) {
             c = new CellImpl();
         } else {
-            c = new CellImpl(m_colVec.values(m_ctr));
+            c = new CellImpl(value);
         }
         m_ctr++;
         return c;

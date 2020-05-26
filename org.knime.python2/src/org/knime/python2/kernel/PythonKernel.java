@@ -617,7 +617,7 @@ public class PythonKernel implements AutoCloseable {
         } else if (sentinelOption == SentinelOption.MIN_VAL) {
             m_commands.execute("INT_SENTINEL = -2**31; LONG_SENTINEL = -2**63").get();
         } else {
-            final int sentinelValue = options.getSerializationOptions().getSentinelValue();
+            final int sentinelValue = options.getSerializationOptions().getCustomSentinelValue();
             m_commands.execute("INT_SENTINEL = " + sentinelValue + "; LONG_SENTINEL = " + sentinelValue).get();
         }
     }
