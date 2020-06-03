@@ -93,11 +93,12 @@ class PythonSourceNodeModel extends PythonNodeModel<PythonSourceNodeConfig> {
             exec.createSubProgress(0.7).setProgress(1);
             final Collection<FlowVariable> variables =
                 kernel.getFlowVariables(PythonSourceNodeConfig.getVariableNames().getFlowVariables());
-            table = kernel.getDataTable(PythonSourceNodeConfig.getVariableNames().getOutputTables()[0], exec,
+
+            kernel.getRows(PythonSourceNodeConfig.getVariableNames().getOutputTables()[0], exec,
                 exec.createSubProgress(0.3));
             addNewVariables(variables);
         }
-        return new BufferedDataTable[]{table};
+        return new BufferedDataTable[]{null};
     }
 
     /**

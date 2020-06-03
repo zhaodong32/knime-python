@@ -45,6 +45,7 @@
 
 package org.knime.python2.extensions.serializationlibrary.interfaces;
 
+import org.knime.core.data.convert.map.experimental.RowConsumer;
 import org.knime.python2.extensions.serializationlibrary.SerializationException;
 import org.knime.python2.extensions.serializationlibrary.SerializationOptions;
 import org.knime.python2.kernel.PythonCancelable;
@@ -86,6 +87,11 @@ public interface SerializationLibrary extends AutoCloseable {
      */
     void bytesIntoTable(TableCreator<?> tableCreator, byte[] bytes, SerializationOptions serializationOptions,
         PythonCancelable cancelable) throws SerializationException, PythonCanceledExecutionException;
+
+    default void bytesIntoTable(final RowConsumer rowConsumer, final byte[] bytes, final SerializationOptions serializationOptions,
+        final PythonCancelable cancelable) throws SerializationException, PythonCanceledExecutionException {
+        throw new IllegalStateException("Experimental serialization not implemented.");
+    }
 
     /**
      * Extracts the {@link TableSpec} of the given table. Implementing classes are expected to cancel deserialization in

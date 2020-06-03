@@ -463,6 +463,7 @@ public class ArrowSerializationLibrary implements SerializationLibrary {
         throw new IllegalStateException("Use experimental deserialization instead.");
     }
 
+    @Override
     public void bytesIntoTable(final RowConsumer rowConsumer, final byte[] bytes,
         final SerializationOptions serializationOptions, final PythonCancelable cancelable)
         throws SerializationException, PythonCanceledExecutionException {

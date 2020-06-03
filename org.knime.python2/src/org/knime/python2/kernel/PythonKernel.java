@@ -85,6 +85,7 @@ import org.apache.batik.dom.svg.SAXSVGDocumentFactory;
 import org.apache.batik.util.XMLResourceDescriptor;
 import org.apache.commons.lang.SystemUtils;
 import org.knime.core.data.container.CloseableRowIterator;
+import org.knime.core.data.convert.map.experimental.RowConsumer;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
@@ -995,6 +996,43 @@ public class PythonKernel implements AutoCloseable {
         } catch (final Exception ex) {
             throw getMostSpecificPythonKernelException(ex);
         }
+    }
+
+    public RowConsumer getRows(final String name, final ExecutionContext exec, final ExecutionMonitor executionMonitor) {
+        try {
+            final PythonCancelable cancelable = new PythonExecutionMonitorCancelable(executionMonitor);
+            final ExecutionMonitor serializationMonitor = executionMonitor.createSubProgress(0.5);
+            final ExecutionMonitor deserializationMonitor = executionMonitor.createSubProgress(0.5);
+            final int tableSize = m_commands.getTableSize(name).get();
+            final int chunkSize = m_kernelOptions.getSerializationOptions().getChunkSize();
+            int numberChunks = (int)Math.ceil(tableSize / (double)chunkSize);
+            if (numberChunks == 0) {
+                numberChunks = 1;
+            }
+            RowConsumer rowConsumer = null;
+            for (int i = 0; i < numberChunks; i++) {
+                final int start = chunkSize * i;
+                final int end = Math.min(tableSize, (start + chunkSize) - 1);
+                final byte[] bytes = waitForFutureCancelable(m_commands.getTableChunk(name, start, end), cancelable);
+                serializationMonitor.setProgress((end + 1) / (double)tableSize);
+                if (rowConsumer == null) {
+                    final TableSpec spec = m_serializer.tableSpecFromBytes(bytes, cancelable);
+                    rowConsumer = createRowConsumer();
+                }
+                m_serializer.bytesIntoTable(rowConsumer, bytes, m_kernelOptions.getSerializationOptions(), cancelable);
+                deserializationMonitor.setProgress((end + 1) / (double)tableSize);
+            }
+            // TODO: return something
+            throw new PythonIOException("Invalid serialized table received.");
+        } catch (final PythonCanceledExecutionException ex) {
+            throw new CanceledExecutionException(ex.getMessage());
+        } catch (final Exception ex) {
+            throw getMostSpecificPythonKernelException(ex);
+        }
+    }
+
+    private static RowConsumer createRowConsumer() {
+        new BufferedDataTableCreator(spec, exec, deserializationMonitor, tableSize);
     }
 
     /**
