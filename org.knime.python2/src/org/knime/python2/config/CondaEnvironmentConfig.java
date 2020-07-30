@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.eclipse.core.runtime.Platform;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.defaultnodesettings.SettingsModelString;
 import org.knime.python2.Conda;
 import org.knime.python2.Conda.CondaEnvironmentSpec;
@@ -65,6 +66,8 @@ import org.osgi.service.prefs.Preferences;
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
 public final class CondaEnvironmentConfig extends AbstractPythonEnvironmentConfig {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(CondaEnvironmentConfig.class);
 
     private PythonVersion m_pythonVersion;
 
@@ -133,6 +136,7 @@ public final class CondaEnvironmentConfig extends AbstractPythonEnvironmentConfi
     public void loadConfigFrom(final PythonConfigStorage storage) {
         // Legacy support: we used to only save the environment's name, not the path to its directory. If only the name
         // is available, we need to convert it into the correct path.
+        LOGGER.debug("Loading conda environment config for " + m_pythonVersion.getName() + ".");
         if (storage instanceof PreferenceWrappingConfigStorage) {
             final Preferences preferences =
                 ((PreferenceWrappingConfigStorage)storage).getWrappedPreferences().getWritePreferences();
@@ -140,6 +144,8 @@ public final class CondaEnvironmentConfig extends AbstractPythonEnvironmentConfi
                 m_environmentDirectory.getKey(), //
                 null, //
                 new Preferences[]{preferences}) == null;
+            LOGGER.debug(
+                "Loading conda environment config for " + m_pythonVersion.getName() + ". Is legacy: " + isLegacy + ".");
             if (isLegacy) {
                 final SettingsModelString environmentName = new SettingsModelString(
                     m_pythonVersion == PythonVersion.PYTHON2 //
@@ -147,18 +153,22 @@ public final class CondaEnvironmentConfig extends AbstractPythonEnvironmentConfi
                         : LEGACY_CFG_KEY_PYTHON3_CONDA_ENV_NAME, //
                     LEGACY_PLACEHOLDER_CONDA_ENV_NAME);
                 storage.loadStringModel(environmentName);
+                LOGGER.debug("Finding conda environment path for name \"" + environmentName + "\".");
                 try {
                     final String environmentNameValue = environmentName.getStringValue();
                     final List<CondaEnvironmentSpec> environments =
                         new Conda(m_condaDirectory.getStringValue()).getEnvironments();
                     for (final CondaEnvironmentSpec environment : environments) {
                         if (environmentNameValue.equals(environment.getName())) {
+                            LOGGER.debug("Found conda environment path for name \"" + environmentName
+                                + "\". Directory: \"" + environment.getDirectoryPath() + "\".");
                             m_environmentDirectory.setStringValue(environment.getDirectoryPath());
                             storage.saveStringModel(m_environmentDirectory);
                             break;
                         }
                     }
                 } catch (final IOException ex) {
+                    LOGGER.debug("Error finding conda environment path for name \"" + environmentName + "\"", ex);
                     // Keep directory path's default value.
                 }
                 return;
