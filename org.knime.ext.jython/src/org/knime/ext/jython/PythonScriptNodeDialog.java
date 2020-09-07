@@ -146,15 +146,11 @@ public class PythonScriptNodeDialog extends NodeDialogPane
         		
         		// read the contents and put them in the script textarea
         		StringBuffer buffer = new StringBuffer();
-        		BufferedReader reader;
-        		try {
-            		reader = new BufferedReader(new FileReader(file));
+        		try (final BufferedReader reader = new BufferedReader(new FileReader(file))) {
             		while (reader.ready()) {
             			String line = reader.readLine();
             			buffer.append(line + "\n");
             		}
-            		reader.close();
-            		
         		} catch (IOException exc) {
         			exc.printStackTrace();
         		}

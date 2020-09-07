@@ -70,6 +70,7 @@ import org.knime.core.data.filestore.FileStore;
 import org.knime.core.data.filestore.FileStorePortObject;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionMonitor;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.port.PortObjectZipInputStream;
 import org.knime.core.node.port.PortObjectZipOutputStream;
@@ -86,6 +87,8 @@ import org.knime.python2.util.MemoryAlertAwareGuavaCache;
  * @since 3.6.1
  */
 public final class PickledObjectFileStorePortObject extends FileStorePortObject {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(PickledObjectFileStorePortObject.class);
 
     /**
      * The type of this port.
@@ -153,6 +156,7 @@ public final class PickledObjectFileStorePortObject extends FileStorePortObject 
         try {
             return shortenString(getPickledObject().toString(), 60, "...");
         } catch (final IOException ex) {
+            LOGGER.debug(ex);
             return "[Failed to load pickled object.]";
         }
     }
@@ -169,6 +173,7 @@ public final class PickledObjectFileStorePortObject extends FileStorePortObject 
         try {
             pickledObject = getPickledObject();
         } catch (final IOException ex) {
+            LOGGER.debug(ex);
             throw new IllegalStateException("Failed to load pickled object.");
         }
         if (pickledObject != null) {
@@ -202,7 +207,7 @@ public final class PickledObjectFileStorePortObject extends FileStorePortObject 
     }
 
     private static String shortenString(final String string, final int maxLength, final String suffix) {
-        return string.length() > maxLength ? string.substring(0, maxLength - suffix.length()) + suffix : string;
+        return string.length() > maxLength ? (string.substring(0, maxLength - suffix.length()) + suffix) : string;
     }
 
     @Override
