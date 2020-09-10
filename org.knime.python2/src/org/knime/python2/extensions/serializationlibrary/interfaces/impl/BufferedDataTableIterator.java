@@ -562,7 +562,7 @@ public class BufferedDataTableIterator implements TableIterator {
                     types[i] = Type.BYTES;
                     columnSerializers.put(colSpec.getName(), typeExtension.getId());
                 } else {
-                    if (colSpec.getType().getCollectionElementType().isCompatible(StringValue.class)) {
+                    if (colSpec.getType().isCompatible(StringValue.class)) {
                         types[i] = Type.STRING;
                     } else {
                         types[i] = Type.TO_STRING;

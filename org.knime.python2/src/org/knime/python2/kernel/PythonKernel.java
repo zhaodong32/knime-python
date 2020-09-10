@@ -121,7 +121,7 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.TableIterato
 import org.knime.python2.extensions.serializationlibrary.interfaces.TableSpec;
 import org.knime.python2.extensions.serializationlibrary.interfaces.Type;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.BufferedDataTableChunker;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.BufferedDataTableCreator;
+import org.knime.python2.extensions.serializationlibrary.interfaces.impl.BufferedDataTableCreator2;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.KeyValueTableCreator;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.KeyValueTableIterator;
@@ -986,7 +986,7 @@ public class PythonKernel implements AutoCloseable {
             if (numberChunks == 0) {
                 numberChunks = 1;
             }
-            BufferedDataTableCreator tableCreator = null;
+            BufferedDataTableCreator2 tableCreator = null;
             for (int i = 0; i < numberChunks; i++) {
                 final int start = chunkSize * i;
                 final int end = Math.min(tableSize, (start + chunkSize) - 1);
@@ -994,7 +994,7 @@ public class PythonKernel implements AutoCloseable {
                 serializationMonitor.setProgress((end + 1) / (double)tableSize);
                 if (tableCreator == null) {
                     final TableSpec spec = m_serializer.tableSpecFromBytes(bytes, cancelable);
-                    tableCreator = new BufferedDataTableCreator(spec, exec, deserializationMonitor, tableSize);
+                    tableCreator = new BufferedDataTableCreator2(spec, exec, deserializationMonitor, tableSize);
                 }
                 m_serializer.bytesIntoTable(tableCreator, bytes, m_kernelOptions.getSerializationOptions(), cancelable);
                 deserializationMonitor.setProgress((end + 1) / (double)tableSize);
