@@ -125,6 +125,7 @@ public class CellImpl implements Cell {
         m_type = Type.BOOLEAN_LIST;
         m_value = value;
         m_missing = missings;
+
     }
 
     /**

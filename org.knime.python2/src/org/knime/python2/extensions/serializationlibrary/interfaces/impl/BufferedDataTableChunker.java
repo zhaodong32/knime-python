@@ -46,7 +46,7 @@
 package org.knime.python2.extensions.serializationlibrary.interfaces.impl;
 
 import org.knime.core.data.DataTableSpec;
-import org.knime.core.data.container.CloseableRowIterator;
+import org.knime.core.data.RowReadCursor;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.python2.extensions.serializationlibrary.interfaces.TableChunker;
@@ -66,7 +66,7 @@ public class BufferedDataTableChunker implements TableChunker {
 
     private final IterationProperties m_iterationProperties;
 
-    private final CloseableRowIterator m_iterator;
+    private final RowReadCursor m_iterator;
 
     private final TableSpec m_spec;
 
@@ -79,7 +79,7 @@ public class BufferedDataTableChunker implements TableChunker {
      * @param rowIterator an iterator for the table to chunk
      * @param numberRows the number of rows of the table to chunk
      */
-    public BufferedDataTableChunker(final DataTableSpec spec, final CloseableRowIterator rowIterator,
+    public BufferedDataTableChunker(final DataTableSpec spec, final RowReadCursor rowIterator,
         final int numberRows) {
         this(BufferedDataTableIterator.dataTableSpecToTableSpec(spec), rowIterator, numberRows);
     }
@@ -91,7 +91,7 @@ public class BufferedDataTableChunker implements TableChunker {
      * @param rowIterator an iterator for the table to chunk
      * @param numberRows the number of rows of the table to chunk
      */
-    public BufferedDataTableChunker(final TableSpec spec, final CloseableRowIterator rowIterator,
+    public BufferedDataTableChunker(final TableSpec spec, final RowReadCursor rowIterator,
         final int numberRows) {
         m_spec = spec;
         m_iterationProperties = new IterationProperties(numberRows);

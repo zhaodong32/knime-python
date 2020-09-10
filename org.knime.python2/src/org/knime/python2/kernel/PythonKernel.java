@@ -84,7 +84,7 @@ import javax.imageio.ImageIO;
 import org.apache.batik.anim.dom.SAXSVGDocumentFactory;
 import org.apache.batik.util.XMLResourceDescriptor;
 import org.apache.commons.lang.SystemUtils;
-import org.knime.core.data.container.CloseableRowIterator;
+import org.knime.core.data.RowReadCursor;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
@@ -843,7 +843,7 @@ public class PythonKernel implements AutoCloseable {
             final ExecutionMonitor serializationMonitor = executionMonitor.createSubProgress(0.5);
             final ExecutionMonitor deserializationMonitor = executionMonitor.createSubProgress(0.5);
             final int chunkSize = m_kernelOptions.getSerializationOptions().getChunkSize();
-            try (final CloseableRowIterator iterator = table.iterator()) {
+            try (final RowReadCursor iterator = table.cursor()) {
                 if (table.size() > Integer.MAX_VALUE) {
                     throw new PythonIOException(
                         "Number of rows exceeds maximum of " + Integer.MAX_VALUE + " rows for input table!");
