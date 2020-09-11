@@ -66,20 +66,13 @@ import org.knime.core.data.filestore.FileStoreFactory;
 import org.knime.core.data.vector.bytevector.DenseByteVectorCell;
 import org.knime.core.data2.RowContainerCustomKey;
 import org.knime.core.data2.RowContainerFactory;
-import org.knime.core.data2.types.BooleanColumnType.BooleanWriteValue;
-import org.knime.core.data2.types.DoubleColumnType.DoubleWriteValue;
-import org.knime.core.data2.types.IntColumnType.IntWriteValue;
-import org.knime.core.data2.types.LongColumnType.LongWriteValue;
-import org.knime.core.data2.types.StringColumnType.StringWriteValue;
 import org.knime.core.node.BufferedDataTable;
-import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.python.typeextension.PythonToKnimeExtensions;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
 import org.knime.python2.extensions.serializationlibrary.interfaces.Row;
-import org.knime.python2.extensions.serializationlibrary.interfaces.TableCreator;
+import org.knime.python2.extensions.serializationlibrary.interfaces.RowContainerTableCreator;
 import org.knime.python2.extensions.serializationlibrary.interfaces.TableSpec;
 
 /**
@@ -87,7 +80,7 @@ import org.knime.python2.extensions.serializationlibrary.interfaces.TableSpec;
  *
  * @author Clemens von Schwerin, KNIME GmbH, Konstanz, Germany
  */
-public class BufferedDataTableCreator2 implements TableCreator<BufferedDataTable> {
+public class BufferedDataTableCreator2 implements RowContainerTableCreator {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(BufferedDataTableCreator2.class);
 
@@ -252,53 +245,18 @@ public class BufferedDataTableCreator2 implements TableCreator<BufferedDataTable
 
     @Override
     public void addRow(final Row row) {
-        try {
-            m_executionMonitor.checkCanceled();
-        } catch (final CanceledExecutionException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-
-        int i = 0;
-        for (final Cell cell : row) {
-            if (cell.isMissing()) {
-                m_rowContainer.setMissing(i);
-            } else {
-                switch (cell.getColumnType()) {
-                    case BOOLEAN:
-                        m_rowContainer.<BooleanWriteValue> getWriteValue(i).setBooleanValue(cell.getBooleanValue());
-                        break;
-                    case INTEGER:
-                        m_rowContainer.<IntWriteValue> getWriteValue(i).setIntValue(cell.getIntegerValue());
-                        break;
-                    case LONG:
-                        m_rowContainer.<LongWriteValue> getWriteValue(i).setLongValue(cell.getLongValue());
-                        break;
-                    case DOUBLE:
-                        m_rowContainer.<DoubleWriteValue> getWriteValue(i).setDoubleValue(cell.getDoubleValue());
-                        break;
-                    case FLOAT:
-                        // TODO Use DoubleCell for now.
-                        m_rowContainer.<DoubleWriteValue> getWriteValue(i).setDoubleValue(cell.getFloatValue());
-                        break;
-                    case STRING:
-                        m_rowContainer.<StringWriteValue> getWriteValue(i).setStringValue(cell.getStringValue());
-                        break;
-                    default:
-                        throw new UnsupportedOperationException(
-                            "ColumnType: " + cell.getColumnType() + " not supported yet by FastTables.");
-                }
-            }
-            i++;
-        }
-        m_rowContainer.setRowKey(row.getRowKey());
-        m_rowContainer.push();
-        m_rowsDone++;
-        m_executionMonitor.setProgress(m_rowsDone / (double)m_tableSize);
+        throw new UnsupportedOperationException(
+            "RowContainer based TableCreators don't support addRow(final Row row)");
     }
 
     @Override
     public TableSpec getTableSpec() {
         return m_spec;
+    }
+
+    @Override
+    public RowContainerCustomKey getRowContainer() {
+        return m_rowContainer;
     }
 
     private DataType getMostCommonAncestor(final HashSet<DataType> types) {

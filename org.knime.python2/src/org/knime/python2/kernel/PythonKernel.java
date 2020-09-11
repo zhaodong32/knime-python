@@ -990,7 +990,9 @@ public class PythonKernel implements AutoCloseable {
             for (int i = 0; i < numberChunks; i++) {
                 final int start = chunkSize * i;
                 final int end = Math.min(tableSize, (start + chunkSize) - 1);
+                final long curr = System.currentTimeMillis();
                 final byte[] bytes = waitForFutureCancelable(m_commands.getTableChunk(name, start, end), cancelable);
+                System.out.println("Finished in ..." + (System.currentTimeMillis() - curr));
                 serializationMonitor.setProgress((end + 1) / (double)tableSize);
                 if (tableCreator == null) {
                     final TableSpec spec = m_serializer.tableSpecFromBytes(bytes, cancelable);

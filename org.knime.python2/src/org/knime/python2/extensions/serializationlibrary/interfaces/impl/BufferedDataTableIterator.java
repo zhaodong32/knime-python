@@ -66,7 +66,6 @@ import org.knime.core.data.RowReadCursor;
 import org.knime.core.data.StringValue;
 import org.knime.core.data.collection.CollectionDataValue;
 import org.knime.core.data.collection.SetDataValue;
-import org.knime.core.data.container.DataCellReadValue;
 import org.knime.core.data.container.RowReadInput;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.CanceledExecutionException;
@@ -113,8 +112,8 @@ public class BufferedDataTableIterator implements TableIterator {
      * @param monitor an execution monitor for reporting progress
      * @param ip iteration properties shared with the associated chunker to ensure a consistent state
      */
-    public BufferedDataTableIterator(final DataTableSpec spec, final RowReadCursor rowIterator,
-        final int numberRows, final ExecutionMonitor monitor, final BufferedDataTableChunker.IterationProperties ip) {
+    public BufferedDataTableIterator(final DataTableSpec spec, final RowReadCursor rowIterator, final int numberRows,
+        final ExecutionMonitor monitor, final BufferedDataTableChunker.IterationProperties ip) {
         this(dataTableSpecToTableSpec(spec), rowIterator, numberRows, monitor, ip);
     }
 
@@ -206,11 +205,11 @@ public class BufferedDataTableIterator implements TableIterator {
             if (dataRow.isMissing(i)) {
                 row.setCell(new CellImpl(), i);
             } else if (type == Type.BOOLEAN) {
-                row.setCell(new CellImpl(dataRow.<BooleanValue>getValue(i).getBooleanValue()), i);
+                row.setCell(new CellImpl(dataRow.<BooleanValue> getValue(i).getBooleanValue()), i);
             } else if (type == Type.BOOLEAN_LIST) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 final boolean[] values = new boolean[colCell.size()];
-                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0:1)];
+                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0 : 1)];
                 int j = 0;
                 for (final DataCell innerCell : colCell) {
                     if (!innerCell.isMissing()) {
@@ -222,7 +221,7 @@ public class BufferedDataTableIterator implements TableIterator {
                 row.setCell(new CellImpl(values, missings), i);
 
             } else if (type == Type.BOOLEAN_SET) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 boolean[] values = new boolean[colCell.size()];
                 boolean hasMissing = false;
                 int ctr = 0;
@@ -234,18 +233,18 @@ public class BufferedDataTableIterator implements TableIterator {
                         hasMissing = true;
                     }
                 }
-                if(!hasMissing) {
+                if (!hasMissing) {
                     row.setCell(new CellImpl(values, hasMissing), i);
                 } else {
                     row.setCell(new CellImpl(ArrayUtils.subarray(values, 0, colCell.size() - 1), hasMissing), i);
                 }
 
             } else if (type == Type.INTEGER) {
-                row.setCell(new CellImpl(dataRow.<IntValue>getValue(i).getIntValue()), i);
+                row.setCell(new CellImpl(dataRow.<IntValue> getValue(i).getIntValue()), i);
             } else if (type == Type.INTEGER_LIST) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 final int[] values = new int[colCell.size()];
-                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0:1)];
+                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0 : 1)];
                 int j = 0;
                 for (final DataCell innerCell : colCell) {
                     if (!innerCell.isMissing()) {
@@ -257,7 +256,7 @@ public class BufferedDataTableIterator implements TableIterator {
                 row.setCell(new CellImpl(values, missings), i);
 
             } else if (type == Type.INTEGER_SET) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 IntBuffer buff = IntBuffer.allocate(colCell.size());
                 boolean hasMissing = false;
                 for (final DataCell innerCell : colCell) {
@@ -267,7 +266,7 @@ public class BufferedDataTableIterator implements TableIterator {
                         hasMissing = true;
                     }
                 }
-                if(!hasMissing) {
+                if (!hasMissing) {
                     row.setCell(new CellImpl(buff.array(), hasMissing), i);
                 } else {
                     int[] values = new int[colCell.size() - 1];
@@ -277,11 +276,11 @@ public class BufferedDataTableIterator implements TableIterator {
                 }
 
             } else if (type == Type.LONG) {
-                row.setCell(new CellImpl(dataRow.<LongValue>getValue(i).getLongValue()), i);
+                row.setCell(new CellImpl(dataRow.<LongValue> getValue(i).getLongValue()), i);
             } else if (type == Type.LONG_LIST) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 final long[] values = new long[colCell.size()];
-                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0:1)];
+                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0 : 1)];
                 int j = 0;
                 for (final DataCell innerCell : colCell) {
                     if (!innerCell.isMissing()) {
@@ -293,7 +292,7 @@ public class BufferedDataTableIterator implements TableIterator {
                 row.setCell(new CellImpl(values, missings), i);
 
             } else if (type == Type.LONG_SET) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 LongBuffer buff = LongBuffer.allocate(colCell.size());
                 boolean hasMissing = false;
                 for (final DataCell innerCell : colCell) {
@@ -303,7 +302,7 @@ public class BufferedDataTableIterator implements TableIterator {
                         hasMissing = true;
                     }
                 }
-                if(!hasMissing) {
+                if (!hasMissing) {
                     row.setCell(new CellImpl(buff.array(), hasMissing), i);
                 } else {
                     long[] values = new long[colCell.size() - 1];
@@ -313,11 +312,11 @@ public class BufferedDataTableIterator implements TableIterator {
                 }
 
             } else if (type == Type.DOUBLE) {
-                row.setCell(new CellImpl(dataRow.<DoubleValue>getValue(i).getDoubleValue()), i);
+                row.setCell(new CellImpl(dataRow.<DoubleValue> getValue(i).getDoubleValue()), i);
             } else if (type == Type.DOUBLE_LIST) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 final double[] values = new double[colCell.size()];
-                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0:1)];
+                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0 : 1)];
                 int j = 0;
                 for (final DataCell innerCell : colCell) {
                     if (!innerCell.isMissing()) {
@@ -329,7 +328,7 @@ public class BufferedDataTableIterator implements TableIterator {
                 row.setCell(new CellImpl(values, missings), i);
 
             } else if (type == Type.DOUBLE_SET) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 DoubleBuffer buff = DoubleBuffer.allocate(colCell.size());
                 boolean hasMissing = false;
                 for (final DataCell innerCell : colCell) {
@@ -339,7 +338,7 @@ public class BufferedDataTableIterator implements TableIterator {
                         hasMissing = true;
                     }
                 }
-                if(!hasMissing) {
+                if (!hasMissing) {
                     row.setCell(new CellImpl(buff.array(), hasMissing), i);
                 } else {
                     double[] values = new double[colCell.size() - 1];
@@ -350,9 +349,9 @@ public class BufferedDataTableIterator implements TableIterator {
 
             } else if (type == Type.FLOAT) {
                 // Use DoubleValue for now.
-                row.setCell(new CellImpl(dataRow.<DoubleValue>getValue(i).getDoubleValue()), i);
+                row.setCell(new CellImpl(dataRow.<DoubleValue> getValue(i).getDoubleValue()), i);
             } else if (type == Type.FLOAT_LIST) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 final float[] values = new float[colCell.size()];
                 final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0 : 1)];
                 int j = 0;
@@ -366,7 +365,7 @@ public class BufferedDataTableIterator implements TableIterator {
                 }
                 row.setCell(new CellImpl(values, missings), i);
             } else if (type == Type.FLOAT_SET) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 FloatBuffer buff = FloatBuffer.allocate(colCell.size());
                 boolean hasMissing = false;
                 for (final DataCell innerCell : colCell) {
@@ -388,9 +387,9 @@ public class BufferedDataTableIterator implements TableIterator {
             } else if (type == Type.STRING) {
                 row.setCell(new CellImpl(dataRow.<StringValue> getValue(i).getStringValue()), i);
             } else if (type == Type.STRING_LIST) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 final String[] values = new String[colCell.size()];
-                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0:1)];
+                final byte[] missings = new byte[colCell.size() / 8 + (colCell.size() % 8 == 0 ? 0 : 1)];
                 int j = 0;
                 for (final DataCell innerCell : colCell) {
                     if (!innerCell.isMissing()) {
@@ -402,7 +401,7 @@ public class BufferedDataTableIterator implements TableIterator {
                 row.setCell(new CellImpl(values, missings), i);
 
             } else if (type == Type.STRING_SET) {
-                final CollectionDataValue colCell = (CollectionDataValue)dataRow.<DataCellReadValue>getValue(i).getDataCell();
+                final CollectionDataValue colCell = dataRow.<CollectionDataValue> getValue(i);
                 final String[] values = new String[colCell.size()];
                 boolean hasMissing = false;
                 int j = 0;
@@ -414,14 +413,15 @@ public class BufferedDataTableIterator implements TableIterator {
                         hasMissing = true;
                     }
                 }
-                if(!hasMissing) {
+                if (!hasMissing) {
                     row.setCell(new CellImpl(values, hasMissing), i);
                 } else {
-                    row.setCell(new CellImpl((String[]) ArrayUtils.subarray(values, 0, colCell.size() - 1), hasMissing), i);
+                    row.setCell(new CellImpl((String[])ArrayUtils.subarray(values, 0, colCell.size() - 1), hasMissing),
+                        i);
                 }
 
             } else if (type == Type.BYTES) {
-                final DataCell cell = dataRow.<DataCellReadValue> getValue(i).getDataCell();
+                final DataCell cell = dataRow.getValue(i);
                 final Serializer serializer = m_knimeToPythonExtensions
                     .getSerializer(KnimeToPythonExtensions.getExtension(cell.getType()).getId());
                 try {
@@ -432,7 +432,7 @@ public class BufferedDataTableIterator implements TableIterator {
                     row.setCell(new CellImpl(), i);
                 }
             } else if (type == Type.BYTES_LIST) {
-                final DataCell cell = dataRow.<DataCellReadValue> getValue(i).getDataCell();
+                final DataCell cell = (DataCell)dataRow.getValue(i);
                 final Serializer serializer = m_knimeToPythonExtensions.getSerializer(
                     KnimeToPythonExtensions.getExtension(cell.getType().getCollectionElementType()).getId());
                 final CollectionDataValue colCell = (CollectionDataValue)cell;
@@ -453,7 +453,7 @@ public class BufferedDataTableIterator implements TableIterator {
                 row.setCell(new CellImpl(values, missings), i);
 
             } else if (type == Type.BYTES_SET) {
-                final DataCell cell = dataRow.<DataCellReadValue> getValue(i).getDataCell();
+                final DataCell cell = (DataCell)dataRow.getValue(i);
                 final Serializer serializer = m_knimeToPythonExtensions.getSerializer(
                     KnimeToPythonExtensions.getExtension(cell.getType().getCollectionElementType()).getId());
                 final CollectionDataValue colCell = (CollectionDataValue)cell;
@@ -472,10 +472,11 @@ public class BufferedDataTableIterator implements TableIterator {
                         hasMissing = true;
                     }
                 }
-                if(!hasMissing) {
+                if (!hasMissing) {
                     row.setCell(new CellImpl(values, hasMissing), i);
                 } else {
-                    row.setCell(new CellImpl((byte[][]) ArrayUtils.subarray(values, 0, colCell.size() - 1), hasMissing), i);
+                    row.setCell(new CellImpl((byte[][])ArrayUtils.subarray(values, 0, colCell.size() - 1), hasMissing),
+                        i);
                 }
             }
         }
@@ -507,7 +508,8 @@ public class BufferedDataTableIterator implements TableIterator {
             } else if (colSpec.getType().isCollectionType()) {
                 if (colSpec.getType().getCollectionElementType().isCollectionType()) {
                     //List in list not supported
-                    throw new IllegalStateException("Input table contains a nested collection. Nested collection types are not supported, yet!");
+                    throw new IllegalStateException(
+                        "Input table contains a nested collection. Nested collection types are not supported, yet!");
                 }
                 if (colSpec.getType().isCompatible(SetDataValue.class)) {
                     if (colSpec.getType().getCollectionElementType().isCompatible(BooleanValue.class)) {
@@ -520,7 +522,7 @@ public class BufferedDataTableIterator implements TableIterator {
                         types[i] = Type.DOUBLE_SET;
                     } else {
                         final KnimeToPythonExtension typeExtension =
-                                KnimeToPythonExtensions.getExtension(colSpec.getType().getCollectionElementType());
+                            KnimeToPythonExtensions.getExtension(colSpec.getType().getCollectionElementType());
                         if (typeExtension != null) {
                             types[i] = Type.BYTES_SET;
                             columnSerializers.put(colSpec.getName(), typeExtension.getId());
@@ -543,7 +545,7 @@ public class BufferedDataTableIterator implements TableIterator {
                         types[i] = Type.DOUBLE_LIST;
                     } else {
                         final KnimeToPythonExtension typeExtension =
-                                KnimeToPythonExtensions.getExtension(colSpec.getType().getCollectionElementType());
+                            KnimeToPythonExtensions.getExtension(colSpec.getType().getCollectionElementType());
                         if (typeExtension != null) {
                             types[i] = Type.BYTES_LIST;
                             columnSerializers.put(colSpec.getName(), typeExtension.getId());

@@ -87,7 +87,8 @@ public final class PythonUtils {
      */
     public static class Preconditions {
 
-        private Preconditions() {}
+        private Preconditions() {
+        }
 
         /**
          * Ensures that a string passed as a parameter to the calling method is not null or empty.
@@ -172,7 +173,8 @@ public final class PythonUtils {
 
     public static class Misc {
 
-        private Misc() {}
+        private Misc() {
+        }
 
         /**
          * @param exceptionConsumer may be <code>null</code>. If non-<code>null</code>, is used to report exceptions
@@ -264,12 +266,16 @@ public final class PythonUtils {
          */
         public static <T> T executeCancelable(final Callable<T> task, final ExecutorService executorService,
             final PythonCancelable cancelable) throws PythonIOException, PythonCanceledExecutionException {
+            final long curr = System.currentTimeMillis();
             final Future<T> future = executorService.submit(task);
+
             // Wait until execution is done or cancelled.
             final int waitTimeoutMilliseconds = 1000;
             while (true) {
                 try {
-                    return future.get(waitTimeoutMilliseconds, TimeUnit.MILLISECONDS);
+                    T t = future.get(waitTimeoutMilliseconds, TimeUnit.MILLISECONDS);
+                    System.out.println("Finished serialization in...XXYY " + (System.currentTimeMillis() - curr));
+                    return t;
                 } catch (TimeoutException | InterruptedException ex) {
                     // The current thread has been interrupted or the task is not done yet.
                     if (ex instanceof InterruptedException) {

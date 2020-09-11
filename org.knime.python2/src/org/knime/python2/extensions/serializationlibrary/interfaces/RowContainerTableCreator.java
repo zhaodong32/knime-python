@@ -44,62 +44,32 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Aug 2, 2017 (clemens): created
+ *   Sep 10, 2020 (dietzc): created
  */
-package org.knime.python2.serde.arrow.extractors;
+package org.knime.python2.extensions.serializationlibrary.interfaces;
 
-import org.apache.arrow.vector.Float8Vector;
-import org.knime.core.data2.types.DoubleColumnType.DoubleWriteValue;
-import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
-import org.knime.python2.serde.arrow.DirectVectorExtractor;
+import java.io.IOException;
+
+import org.knime.core.data2.RowContainerCustomKey;
+import org.knime.core.node.BufferedDataTable;
 
 /**
- * Manages the data transfer between the arrow table format and the python table format. Works on Double vectors.
  *
- * @author Clemens von Schwerin, KNIME GmbH, Konstanz, Germany
- * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
- * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
+ * @author dietzc
  */
-public class DoubleExtractor implements DirectVectorExtractor<DoubleWriteValue> {
+public interface RowContainerTableCreator extends TableCreator<BufferedDataTable> {
 
-    private final Float8Vector m_vector;
-
-    private int m_ctr;
-
-    /**
-     * Constructor.
-     *
-     * @param vector the vector to extract from
-     */
-    public DoubleExtractor(final Float8Vector vector) {
-        m_vector = vector;
-    }
+    RowContainerCustomKey getRowContainer();
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Cell extract() {
-        Cell c;
-        if (m_vector.isNull(m_ctr)) {
-            c = new CellImpl(Double.NaN);
-        } else {
-            c = new CellImpl(m_vector.get(m_ctr));
-        }
-        m_ctr++;
-        return c;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void writeTo(final DoubleWriteValue value, final int index) {
-        if (m_vector.isNull(index)) {
-            value.setMissing();
-        } else {
-            value.setDoubleValue(m_vector.get(index));
+    default BufferedDataTable getTable() {
+        try {
+            return getRowContainer().finish();
+        } catch (IOException ex) {
+            throw new IllegalStateException(ex);
         }
     }
 }

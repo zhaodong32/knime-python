@@ -49,25 +49,27 @@
 package org.knime.python2.serde.arrow.extractors;
 
 import org.apache.arrow.vector.VarCharVector;
+import org.knime.core.data2.types.StringColumnType.StringWriteValue;
 import org.knime.python2.extensions.serializationlibrary.interfaces.Cell;
-import org.knime.python2.extensions.serializationlibrary.interfaces.VectorExtractor;
 import org.knime.python2.extensions.serializationlibrary.interfaces.impl.CellImpl;
+import org.knime.python2.serde.arrow.DirectVectorExtractor;
 
 /**
- * Manages the data transfer between the arrow table format and the python table format.
- * Works on String vectors.
+ * Manages the data transfer between the arrow table format and the python table format. Works on String vectors.
  *
  * @author Clemens von Schwerin, KNIME GmbH, Konstanz, Germany
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public class StringExtractor implements VectorExtractor {
+public class StringExtractor implements DirectVectorExtractor<StringWriteValue> {
 
     private final VarCharVector m_vector;
+
     private int m_ctr;
 
     /**
      * Constructor.
+     *
      * @param vector the vector to extract from
      */
     public StringExtractor(final VarCharVector vector) {
@@ -80,13 +82,25 @@ public class StringExtractor implements VectorExtractor {
     @Override
     public Cell extract() {
         Cell c;
-        if(m_vector.isNull(m_ctr)) {
+        if (m_vector.isNull(m_ctr)) {
             c = new CellImpl();
         } else {
             c = new CellImpl(m_vector.getObject(m_ctr).toString());
         }
         m_ctr++;
         return c;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void writeTo(final StringWriteValue value, final int index) {
+        if (m_vector.isNull(index)) {
+            value.setMissing();
+        } else {
+            value.setStringValue(m_vector.getObject(index).toString());
+        }
     }
 
 }
