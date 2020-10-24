@@ -56,7 +56,9 @@ import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.FlowVariable;
 import org.knime.python2.config.PythonSourceCodeOptionsPanel;
 import org.knime.python2.config.PythonSourceCodePanel;
+import org.knime.python2.generic.templates.ExecutableAndEnvPanel;
 import org.knime.python2.generic.templates.SourceCodeTemplatesPanel;
+import org.knime.python2.nodes.PythonNodeModel;
 
 /**
  * <code>NodeDialog</code> for the node.
@@ -72,6 +74,8 @@ class PythonSourceNodeDialog extends NodeDialogPane {
 
     SourceCodeTemplatesPanel m_templatesPanel;
 
+    ExecutableAndEnvPanel m_executableAndEnvPanel;
+
     /**
      * Create the dialog for this node.
      */
@@ -79,9 +83,11 @@ class PythonSourceNodeDialog extends NodeDialogPane {
         m_sourceCodePanel = new PythonSourceCodePanel(this, PythonSourceNodeConfig.getVariableNames());
         m_sourceCodeOptionsPanel = new PythonSourceCodeOptionsPanel(m_sourceCodePanel);
         m_templatesPanel = new SourceCodeTemplatesPanel(m_sourceCodePanel, "python-source");
+        m_executableAndEnvPanel = new ExecutableAndEnvPanel(PythonNodeModel.class);
         addTab("Script", m_sourceCodePanel, false);
         addTab("Options", m_sourceCodeOptionsPanel, true);
         addTab("Templates", m_templatesPanel, true);
+        addTab("Python Environment", m_executableAndEnvPanel, true);
     }
 
     /**
@@ -92,6 +98,7 @@ class PythonSourceNodeDialog extends NodeDialogPane {
         final PythonSourceNodeConfig config = new PythonSourceNodeConfig();
         m_sourceCodePanel.saveSettingsTo(config);
         m_sourceCodeOptionsPanel.saveSettingsTo(config);
+        m_executableAndEnvPanel.save(settings);
         config.saveTo(settings);
     }
 
@@ -107,6 +114,7 @@ class PythonSourceNodeDialog extends NodeDialogPane {
         m_sourceCodePanel.updateFlowVariables(
             getAvailableFlowVariables().values().toArray(new FlowVariable[getAvailableFlowVariables().size()]));
         m_sourceCodeOptionsPanel.loadSettingsFrom(config);
+        m_executableAndEnvPanel.load(settings);
     }
 
     /**

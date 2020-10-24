@@ -48,6 +48,7 @@ package org.knime.python2.nodes;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.knime.base.node.util.exttool.ExtToolOutputNodeModel;
@@ -61,6 +62,8 @@ import org.knime.python2.PythonCommand;
 import org.knime.python2.PythonModuleSpec;
 import org.knime.python2.config.PythonFlowVariableOptions;
 import org.knime.python2.config.PythonSourceCodeConfig;
+import org.knime.python2.generic.PythonEnvironment;
+import org.knime.python2.generic.PythonEnvironmentAware;
 import org.knime.python2.kernel.PythonCancelable;
 import org.knime.python2.kernel.PythonCanceledExecutionException;
 import org.knime.python2.kernel.PythonIOException;
@@ -75,7 +78,8 @@ import org.knime.python2.kernel.PythonKernelQueue;
  * @author Clemens von Schwerin, KNIME GmbH, Konstanz, Germany
  * @param <Config> a configuration type
  */
-public abstract class PythonNodeModel<Config extends PythonSourceCodeConfig> extends ExtToolOutputNodeModel {
+public abstract class PythonNodeModel<Config extends PythonSourceCodeConfig> extends ExtToolOutputNodeModel
+    implements PythonEnvironmentAware {
 
     Config m_config = createConfig();
 
@@ -191,6 +195,20 @@ public abstract class PythonNodeModel<Config extends PythonSourceCodeConfig> ext
     @Override
     protected void saveSettingsTo(final NodeSettingsWO settings) {
         m_config.saveTo(settings);
+        if (m_pythonEnvironment != null) {
+            m_pythonEnvironment.save(settings);
+        }
+    }
+
+    /**
+     * @param settings
+     */
+    private void save(final NodeSettingsWO settings) {
+        if (m_pythonEnvironment != null) {
+            NodeSettingsWO pythonEnvSettings = settings.addNodeSettings("pythonEnvironment");
+            pythonEnvSettings.addString("name", m_pythonEnvironment.getName());
+            pythonEnvSettings.addTransientString("definition", m_pythonEnvironment.getDefinitionAsString());
+        }
     }
 
     /**
@@ -200,6 +218,8 @@ public abstract class PythonNodeModel<Config extends PythonSourceCodeConfig> ext
     protected void validateSettings(final NodeSettingsRO settings) throws InvalidSettingsException {
         final Config config = createConfig();
         config.loadFrom(settings);
+        // TODO should probably go into config?
+        PythonEnvironment.validate(settings);
     }
 
     /**
@@ -210,6 +230,20 @@ public abstract class PythonNodeModel<Config extends PythonSourceCodeConfig> ext
         final Config config = createConfig();
         config.loadFrom(settings);
         m_config = config;
+        // TODO should probably go into config?
+        m_pythonEnvironment = PythonEnvironment.loadInModel(this, settings);
+    }
+
+    private PythonEnvironment m_pythonEnvironment;
+
+    @Override
+    public Optional<PythonEnvironment> getPythonEnvironment() {
+        return Optional.ofNullable(m_pythonEnvironment);
+    }
+
+    @Override
+    public final void setWarning(final String warningMessage) {
+        super.setWarningMessage(warningMessage);
     }
 
 }

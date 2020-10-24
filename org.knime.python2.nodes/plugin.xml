@@ -39,4 +39,10 @@
               path="templates/">
         </directory>
      </extension>
+     <extension
+           point="org.knime.core.WorkflowSaveHook">
+        <WorkflowSaveHook
+              class="org.knime.python2.nodes.PythonEnvironmentWorkflowSaveHook">
+        </WorkflowSaveHook>
+     </extension>
 </plugin>
