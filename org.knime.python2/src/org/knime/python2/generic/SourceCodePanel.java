@@ -715,6 +715,7 @@ public abstract class SourceCodePanel extends JPanel {
         installAutoCompletion();
 
         m_editor.setText(config.getSourceCode());
+        m_editor.convertTabsToSpaces();
         final List<DataTableSpec> tableSpecs = new ArrayList<DataTableSpec>();
         for (final PortObjectSpec spec : specs) {
             if (spec instanceof DataTableSpec) {
@@ -1117,6 +1118,7 @@ public abstract class SourceCodePanel extends JPanel {
         editor.setRoundedSelectionEdges(true);
         editor.setBorder(new EtchedBorder());
         editor.setTabSize(4);
+        editor.setTabsEmulated(true);
         return editor;
     }
 
