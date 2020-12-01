@@ -44,70 +44,87 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Nov 16, 2020 (marcel): created
+ *   Dec 1, 2020 (marcel): created
  */
-package org.knime.python2.nodes;
+package org.knime.python2.config;
+
+import java.util.Locale;
 
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
-import org.knime.core.node.NotConfigurableException;
-import org.knime.core.node.port.PortObjectSpec;
-import org.knime.python2.config.PythonCommandSelectionPanel;
+import org.knime.python2.PythonVersion;
+import org.knime.python2.prefs.PythonPreferences;
 
 /**
- * Base class for data-unaware dialogs of Python scripting nodes.
- *
- * @see PythonDataAwareNodeDialog
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  */
-public abstract class PythonDataUnawareNodeDialog extends NodeDialogPane {
+public final class PythonCommandSelectionConfig {
 
-    private PythonNodeDialogContent m_content;
+    private static final String CFG_PYTHON_VERSION = "pythonVersionOption";
+
+    private static final String CFG_PYTHON2_COMMAND = "python2Command";
+
+    private static final String CFG_PYTHON3_COMMAND = "python3Command";
+
+    private PythonVersion m_pythonVersion = PythonPreferences.getPythonVersionPreference();
+
+    private PythonCommandFlowVariableConfig m_python2CommandConfig = new PythonCommandFlowVariableConfig(
+        CFG_PYTHON2_COMMAND, PythonVersion.PYTHON2, PythonPreferences::getCondaInstallationPath);
+
+    private PythonCommandFlowVariableConfig m_python3CommandConfig = new PythonCommandFlowVariableConfig(
+        CFG_PYTHON3_COMMAND, PythonVersion.PYTHON3, PythonPreferences::getCondaInstallationPath);
 
     /**
-     * Must be called before this instance can be used. Initializing the content via this method instead of via a
-     * constructor is required because {@code content} indirectly requires a reference to this instance which cannot be
-     * provided during the construction of the instance.
-     *
-     * @param content This dialog pane's content.
+     * @return The configured Python version.
      */
-    protected void initializeContent(final PythonNodeDialogContent content) {
-        if (m_content == null) {
-            m_content = content;
-            addTab("Script", m_content.getScriptPanel(), false);
-            addTab("Options", m_content.getOptionsPanel());
-            addTab(PythonCommandSelectionPanel.DEFAULT_TAB_NAME, m_content.getCommandSelectionPanel());
-            addTab("Templates", m_content.getTemplatesPanel());
-        } else {
-            throw new IllegalStateException("Content has already been initialized.");
-        }
+    public PythonVersion getPythonVersion() {
+        return m_pythonVersion;
     }
 
-    @Override
-    protected void loadSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
-        throws NotConfigurableException {
-        m_content.loadSettingsFrom(settings, specs, getCredentialsProvider());
+    /**
+     * @param pythonVersion The configured Python version.
+     */
+    public void setPythonVersion(final PythonVersion pythonVersion) {
+        m_pythonVersion = pythonVersion;
     }
 
-    @Override
-    protected void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
-        m_content.saveSettingsTo(settings);
+    /**
+     * @return The config of the Python 2 command.
+     */
+    public PythonCommandFlowVariableConfig getPython2CommandConfig() {
+        return m_python2CommandConfig;
     }
 
-    @Override
-    public boolean closeOnESC() {
-        return PythonNodeDialogContent.closeDialogOnESC();
+    /**
+     * @return The config of the Python 3 command.
+     */
+    public PythonCommandFlowVariableConfig getPython3CommandConfig() {
+        return m_python3CommandConfig;
     }
 
-    @Override
-    public void onOpen() {
-        m_content.onDialogOpen();
+    /**
+     * Load this configuration from the given settings.
+     *
+     * @param settings The setting.
+     * @throws InvalidSettingsException If loading the configuration failed.
+     */
+    public void loadFromSettings(final NodeSettingsRO settings) throws InvalidSettingsException {
+        final String pythonVersionString = settings.getString(CFG_PYTHON_VERSION, getPythonVersion().getId());
+        // Backward compatibility: older saved versions are all upper case.
+        setPythonVersion(PythonVersion.fromId(pythonVersionString.toLowerCase(Locale.ROOT)));
+        m_python2CommandConfig.loadSettingsFrom(settings);
+        m_python3CommandConfig.loadSettingsFrom(settings);
     }
 
-    @Override
-    public void onClose() {
-        m_content.onDialogClose();
+    /**
+     * Save this configuration to the given settings.
+     *
+     * @param settings The setting.
+     */
+    public void saveToSettings(final NodeSettingsWO settings) {
+        settings.addString(CFG_PYTHON_VERSION, getPythonVersion().getId());
+        m_python2CommandConfig.saveSettingsTo(settings);
+        m_python3CommandConfig.saveSettingsTo(settings);
     }
 }

@@ -64,6 +64,11 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 
+import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.NodeDialogPane;
+import org.knime.core.node.NodeSettingsRO;
+import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.NotConfigurableException;
 import org.knime.python2.PythonCommand;
 import org.knime.python2.PythonVersion;
 
@@ -71,9 +76,11 @@ import org.knime.python2.PythonVersion;
  * @author Marcel Wiedenmann, KNIME GmbH, Konstanz, Germany
  */
 @SuppressWarnings("serial") // Not intended for serialization.
-public final class PythonExecutableSelectionPanel extends JPanel {
+public final class PythonCommandSelectionPanel extends JPanel {
 
     public static final String DEFAULT_TAB_NAME = "Executable Selection";
+
+    private final PythonCommandSelectionConfig m_config;
 
     private final Supplier<PythonCommand> m_defaultPython2Command;
 
@@ -82,13 +89,13 @@ public final class PythonExecutableSelectionPanel extends JPanel {
     /** {@code null} if no particular version is enforced. */
     private final PythonVersion m_enforcedVersion;
 
+    private final PythonCommandFlowVariableModel m_python2CommandModel;
+
+    private final PythonCommandFlowVariableModel m_python3CommandModel;
+
     private final JRadioButton m_python2Button;
 
     private final JRadioButton m_python3Button;
-
-    private PythonCommand m_python2Command;
-
-    private PythonCommand m_python3Command;
 
     private final List<BiConsumer<PythonVersion, PythonCommand>> m_listeners = new CopyOnWriteArrayList<>();
 
@@ -98,9 +105,9 @@ public final class PythonExecutableSelectionPanel extends JPanel {
      * @param defaultPython3Command A supplier that returns the Python 3 command to use if no node-specific command his
      *            configured.
      */
-    public PythonExecutableSelectionPanel(final Supplier<PythonCommand> defaultPython2Command,
-        final Supplier<PythonCommand> defaultPython3Command) {
-        this(defaultPython2Command, defaultPython3Command, null);
+    public PythonCommandSelectionPanel(final NodeDialogPane dialog, final PythonCommandSelectionConfig config,
+        final Supplier<PythonCommand> defaultPython2Command, final Supplier<PythonCommand> defaultPython3Command) {
+        this(dialog, config, defaultPython2Command, defaultPython3Command, null);
     }
 
     /**
@@ -113,11 +120,20 @@ public final class PythonExecutableSelectionPanel extends JPanel {
      * @param enforcedPythonVersion Enforce the given Python version. Can be {@code null}, in which case the user is
      *            given the option to choose the Python version to use.
      */
-    public PythonExecutableSelectionPanel(final Supplier<PythonCommand> defaultPython2Command,
-        final Supplier<PythonCommand> defaultPython3Command, final PythonVersion enforcedPythonVersion) {
+    public PythonCommandSelectionPanel(final NodeDialogPane dialog, final PythonCommandSelectionConfig config,
+        final Supplier<PythonCommand> defaultPython2Command, final Supplier<PythonCommand> defaultPython3Command,
+        final PythonVersion enforcedPythonVersion) {
+        m_config = config;
         m_defaultPython2Command = defaultPython2Command;
         m_defaultPython3Command = defaultPython3Command;
         m_enforcedVersion = enforcedPythonVersion;
+
+        m_python2CommandModel = enforcedPythonVersion != PythonVersion.PYTHON3 //
+            ? new PythonCommandFlowVariableModel(dialog, m_config.getPython2CommandConfig()) //
+            : null;
+        m_python3CommandModel = enforcedPythonVersion != PythonVersion.PYTHON2 //
+            ? new PythonCommandFlowVariableModel(dialog, m_config.getPython3CommandConfig()) //
+            : null;
 
         setLayout(new GridBagLayout());
         final GridBagConstraints gbc = new GridBagConstraints();
@@ -186,14 +202,20 @@ public final class PythonExecutableSelectionPanel extends JPanel {
      * @return The configured Python 2 command.
      */
     public PythonCommand getPython2Command() {
-        return m_python2Command != null ? m_python2Command : m_defaultPython2Command.get();
+        if (m_enforcedVersion == PythonVersion.PYTHON3) {
+            throw new IllegalStateException("Python 2 is not supported.");
+        }
+        return m_config.getPython2CommandConfig().getCommand().orElseGet(m_defaultPython2Command);
     }
 
     /**
      * @return The configured Python 3 command.
      */
     public PythonCommand getPython3Command() {
-        return m_python3Command != null ? m_python3Command : m_defaultPython3Command.get();
+        if (m_enforcedVersion == PythonVersion.PYTHON2) {
+            throw new IllegalStateException("Python 3 is not supported.");
+        }
+        return m_config.getPython3CommandConfig().getCommand().orElseGet(m_defaultPython3Command);
     }
 
     /**
@@ -214,6 +236,55 @@ public final class PythonExecutableSelectionPanel extends JPanel {
         m_listeners.remove(listener);
     }
 
+    /**
+     * Load this panel's configuration from the given settings.
+     *
+     * @param settings The setting.
+     * @throws NotConfigurableException If loading the configuration failed.
+     */
+    public void loadSettingsFrom(final NodeSettingsRO settings) throws NotConfigurableException {
+        try {
+            m_config.loadFromSettings(settings);
+        } catch (final InvalidSettingsException ex) {
+            throw new NotConfigurableException(ex.getMessage(), ex);
+        }
+        loadPythonCommandModel(m_python2CommandModel, settings);
+        loadPythonCommandModel(m_python3CommandModel, settings);
+        // TODO: move events to config
+        // The Python version must be loaded after the commands since updating the buttons' selection states may trigger
+        // a change event.
+        final PythonVersion pythonVersion = m_enforcedVersion != null //
+            ? m_enforcedVersion //
+            : m_config.getPythonVersion();
+        m_python2Button.setSelected(pythonVersion == PythonVersion.PYTHON2);
+        m_python3Button.setSelected(pythonVersion == PythonVersion.PYTHON3);
+    }
+
+    private static void loadPythonCommandModel(final PythonCommandFlowVariableModel pythonCommandModel,
+        final NodeSettingsRO settings) throws NotConfigurableException {
+        if (pythonCommandModel != null) {
+            pythonCommandModel.loadSettingsFrom(settings);
+        }
+    }
+
+    /**
+     * Updates this panel with a new Python 2 command.
+     *
+     * @param python2Command The command.
+     */
+    private void updatePython2Command(final PythonCommand python2Command) {
+        notifyListenersIfCurrentPythonVersion(PythonVersion.PYTHON2, python2Command);
+    }
+
+    /**
+     * Updates this panel with a new Python 3 command.
+     *
+     * @param python3Command The command.
+     */
+    private void updatePython3Command(final PythonCommand python3Command) {
+        notifyListenersIfCurrentPythonVersion(PythonVersion.PYTHON3, python3Command);
+    }
+
     private void notifyListenersIfCurrentPythonVersion(final PythonVersion pythonVersion,
         final PythonCommand pythonCommand) {
         if (pythonVersion == getPythonVersion()) {
@@ -224,51 +295,20 @@ public final class PythonExecutableSelectionPanel extends JPanel {
     }
 
     /**
-     * Updates this panel with a new Python 2 command.
+     * Save this panel's configuration to the given settings.
      *
-     * @param python2Command The command.
+     * @param settings The setting.
      */
-    public void updatePython2Command(final PythonCommand python2Command) {
-        m_python2Command = python2Command;
-        notifyListenersIfCurrentPythonVersion(PythonVersion.PYTHON2, python2Command);
+    public void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
+        m_config.saveToSettings(settings);
+        savePythonCommandModel(m_python2CommandModel, settings);
+        savePythonCommandModel(m_python3CommandModel, settings);
     }
 
-    /**
-     * Updates this panel with a new Python 3 command.
-     *
-     * @param python3Command The command.
-     */
-    public void updatePython3Command(final PythonCommand python3Command) {
-        m_python3Command = python3Command;
-        notifyListenersIfCurrentPythonVersion(PythonVersion.PYTHON3, python3Command);
-    }
-
-    /**
-     * Load this panel's settings from the given configuration.
-     *
-     * @param config The configuration.
-     */
-    public void loadSettingsFrom(final PythonSourceCodeConfig config) {
-        m_python2Command = config.getPython2Command();
-        m_python3Command = config.getPython3Command();
-        // The Python version must be loaded after the commands since updating the buttons' selection states may trigger
-        // a change event.
-        final PythonVersion pythonVersion = m_enforcedVersion != null //
-            ? m_enforcedVersion //
-            : config.getPythonVersion();
-        m_python2Button.setSelected(pythonVersion == PythonVersion.PYTHON2);
-        m_python3Button.setSelected(pythonVersion == PythonVersion.PYTHON3);
-    }
-
-    /**
-     * Save this panel's settings to the given configuration.
-     *
-     * @param config The configuration.
-     */
-    public void saveSettingsTo(final PythonSourceCodeConfig config) {
-        final PythonVersion pythonVersion = getPythonVersion();
-        config.setPythonVersion(pythonVersion);
-        config.setPython2Command(m_python2Command);
-        config.setPython3Command(m_python3Command);
+    private static void savePythonCommandModel(final PythonCommandFlowVariableModel pythonCommandModel,
+        final NodeSettingsWO settings) throws InvalidSettingsException {
+        if (pythonCommandModel != null) {
+            pythonCommandModel.saveSettingsTo(settings);
+        }
     }
 }

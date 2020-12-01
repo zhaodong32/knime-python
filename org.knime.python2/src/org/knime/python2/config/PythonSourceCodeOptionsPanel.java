@@ -84,7 +84,7 @@ import org.knime.python2.kernel.PythonKernelOptions;
 public class PythonSourceCodeOptionsPanel
     extends SourceCodeOptionsPanel<PythonSourceCodePanel, PythonSourceCodeConfig> {
 
-    private final PythonExecutableSelectionPanel m_executableSelectionPanel;
+    private final PythonCommandSelectionPanel m_executableSelectionPanel;
 
     private final BiConsumer<PythonVersion, PythonCommand> m_executableSelectionChangeListener =
         (pythonVersion, pythonCommand) -> getSourceCodePanel().setKernelOptions(getKernelOptions());
@@ -113,7 +113,7 @@ public class PythonSourceCodeOptionsPanel
      * @param sourceCodePanel The source code panel of the node.
      */
     public PythonSourceCodeOptionsPanel(final PythonSourceCodePanel sourceCodePanel,
-        final PythonExecutableSelectionPanel executableSelectionPanel) {
+        final PythonCommandSelectionPanel executableSelectionPanel) {
         super(sourceCodePanel);
         m_executableSelectionPanel = executableSelectionPanel;
 
@@ -199,8 +199,8 @@ public class PythonSourceCodeOptionsPanel
         m_executableSelectionPanel.loadSettingsFrom(config);
         m_executableSelectionPanel.addChangeListener(m_executableSelectionChangeListener);
 
-        m_convertMissingToPython.setSelected(config.getConvertMissingToPython());
-        m_convertMissingFromPython.setSelected(config.getConvertMissingFromPython());
+        m_convertMissingToPython.setSelected(config.isConvertingMissingToPython());
+        m_convertMissingFromPython.setSelected(config.isConvertingMissingFromPython());
         setSentinelOption(config.getSentinelOption());
         m_customSentinelValueInput.setText(config.getSentinelValue() + "");
         m_customSentinelValue = config.getSentinelValue();

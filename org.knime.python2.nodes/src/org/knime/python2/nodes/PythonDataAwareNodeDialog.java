@@ -55,7 +55,7 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.python2.config.PythonExecutableSelectionPanel;
+import org.knime.python2.config.PythonCommandSelectionPanel;
 
 /**
  * Base class for {@link DataAwareNodeDialogPane data-aware} dialogs of Python scripting nodes.
@@ -79,7 +79,7 @@ public abstract class PythonDataAwareNodeDialog extends DataAwareNodeDialogPane 
             m_content = content;
             addTab("Script", m_content.getScriptPanel(), false);
             addTab("Options", m_content.getOptionsPanel());
-            addTab(PythonExecutableSelectionPanel.DEFAULT_TAB_NAME, m_content.getExecutableSelectionPanel());
+            addTab(PythonCommandSelectionPanel.DEFAULT_TAB_NAME, m_content.getCommandSelectionPanel());
             addTab("Templates", m_content.getTemplatesPanel());
         } else {
             throw new IllegalStateException("Content has already been initialized.");

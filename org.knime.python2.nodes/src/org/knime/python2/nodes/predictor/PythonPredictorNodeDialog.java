@@ -57,7 +57,7 @@ import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.FlowVariable;
-import org.knime.python2.config.PythonExecutableSelectionPanel;
+import org.knime.python2.config.PythonCommandSelectionPanel;
 import org.knime.python2.config.PythonSourceCodeOptionsPanel;
 import org.knime.python2.config.PythonSourceCodePanel;
 import org.knime.python2.generic.templates.SourceCodeTemplatesPanel;
@@ -79,13 +79,13 @@ final class PythonPredictorNodeDialog extends DataAwareNodeDialogPane {
 
     public PythonPredictorNodeDialog() {
         m_sourceCodePanel = new PythonSourceCodePanel(this, PythonPredictorNodeConfig.getVariableNames());
-        final PythonExecutableSelectionPanel executablePanel = new PythonExecutableSelectionPanel(
+        final PythonCommandSelectionPanel commandPanel = new PythonCommandSelectionPanel(
             PythonPreferences::getPython2CommandPreference, PythonPreferences::getPython3CommandPreference);
-        m_sourceCodeOptionsPanel = new PythonSourceCodeOptionsPanel(m_sourceCodePanel, executablePanel);
+        m_sourceCodeOptionsPanel = new PythonSourceCodeOptionsPanel(m_sourceCodePanel, commandPanel);
         m_templatesPanel = new SourceCodeTemplatesPanel(m_sourceCodePanel, "python-predictor");
         addTab("Script", m_sourceCodePanel, false);
         addTab("Options", m_sourceCodeOptionsPanel);
-        addTab(PythonExecutableSelectionPanel.DEFAULT_TAB_NAME, executablePanel);
+        addTab(PythonCommandSelectionPanel.DEFAULT_TAB_NAME, commandPanel);
         addTab("Templates", m_templatesPanel);
     }
 

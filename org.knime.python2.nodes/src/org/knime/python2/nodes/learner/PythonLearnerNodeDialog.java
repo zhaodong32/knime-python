@@ -56,7 +56,7 @@ import org.knime.core.node.NodeSettingsWO;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.FlowVariable;
-import org.knime.python2.config.PythonExecutableSelectionPanel;
+import org.knime.python2.config.PythonCommandSelectionPanel;
 import org.knime.python2.config.PythonSourceCodeOptionsPanel;
 import org.knime.python2.config.PythonSourceCodePanel;
 import org.knime.python2.generic.templates.SourceCodeTemplatesPanel;
@@ -77,13 +77,13 @@ final class PythonLearnerNodeDialog extends DataAwareNodeDialogPane {
 
     public PythonLearnerNodeDialog() {
         m_sourceCodePanel = new PythonSourceCodePanel(this, PythonLearnerNodeConfig.getVariableNames());
-        final PythonExecutableSelectionPanel executablePanel = new PythonExecutableSelectionPanel(
+        final PythonCommandSelectionPanel commandPanel = new PythonCommandSelectionPanel(
             PythonPreferences::getPython2CommandPreference, PythonPreferences::getPython3CommandPreference);
-        m_sourceCodeOptionsPanel = new PythonSourceCodeOptionsPanel(m_sourceCodePanel, executablePanel);
+        m_sourceCodeOptionsPanel = new PythonSourceCodeOptionsPanel(m_sourceCodePanel, commandPanel);
         m_templatesPanel = new SourceCodeTemplatesPanel(m_sourceCodePanel, "python-learner");
         addTab("Script", m_sourceCodePanel, false);
         addTab("Options", m_sourceCodeOptionsPanel);
-        addTab(PythonExecutableSelectionPanel.DEFAULT_TAB_NAME, executablePanel);
+        addTab(PythonCommandSelectionPanel.DEFAULT_TAB_NAME, commandPanel);
         addTab("Templates", m_templatesPanel);
     }
 

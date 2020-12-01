@@ -67,8 +67,7 @@ import org.knime.core.node.workflow.CredentialsProvider;
 import org.knime.core.node.workflow.FlowVariable;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.python2.PythonModuleSpec;
-import org.knime.python2.config.PythonCommandFlowVariableModel;
-import org.knime.python2.config.PythonExecutableSelectionPanel;
+import org.knime.python2.config.PythonCommandSelectionPanel;
 import org.knime.python2.config.PythonSourceCodeConfig;
 import org.knime.python2.config.PythonSourceCodeOptionsPanel;
 import org.knime.python2.config.PythonSourceCodePanel;
@@ -109,11 +108,14 @@ public final class PythonNodeDialogContent {
         final InputPort[] inPorts, final PythonSourceCodeConfig config, final VariableNames variableNames,
         final String templateRepositoryId) {
         final PythonSourceCodePanel scriptPanel = new PythonSourceCodePanel(dialog, variableNames);
-        final PythonExecutableSelectionPanel executablePanel = new PythonExecutableSelectionPanel(
+
+        // m_python2CommandFlowVar = new PythonCommandFlowVariableModel(dialog, config.getPython2CommandConfig());
+        // m_python3CommandFlowVar = new PythonCommandFlowVariableModel(dialog, config.getPython3CommandConfig());
+
+        final PythonCommandSelectionPanel commandPanel = new PythonCommandSelectionPanel(
             PythonPreferences::getPython2CommandPreference, PythonPreferences::getPython3CommandPreference);
-        final PythonSourceCodeOptionsPanel optionsPanel =
-            new PythonSourceCodeOptionsPanel(scriptPanel, executablePanel);
-        return new PythonNodeDialogContent(dialog, inPorts, config, scriptPanel, optionsPanel, executablePanel,
+        final PythonSourceCodeOptionsPanel optionsPanel = new PythonSourceCodeOptionsPanel(scriptPanel, commandPanel);
+        return new PythonNodeDialogContent(dialog, inPorts, config, scriptPanel, optionsPanel, commandPanel,
             templateRepositoryId);
     }
 
@@ -123,15 +125,11 @@ public final class PythonNodeDialogContent {
 
     private final PythonSourceCodeConfig m_config;
 
-    private final PythonCommandFlowVariableModel m_python2CommandFlowVar;
-
-    private final PythonCommandFlowVariableModel m_python3CommandFlowVar;
-
     private final PythonSourceCodePanel m_scriptPanel;
 
     private final PythonSourceCodeOptionsPanel m_optionsPanel;
 
-    private final PythonExecutableSelectionPanel m_executablePanel;
+    private final PythonCommandSelectionPanel m_commandPanel;
 
     private final SourceCodeTemplatesPanel m_templatesPanel;
 
@@ -145,27 +143,22 @@ public final class PythonNodeDialogContent {
      * @param config The configuration object of the node.
      * @param scriptPanel The script panel.
      * @param optionsPanel The options panel.
-     * @param executablePanel The executable selection panel.
+     * @param commandPanel The Python command selection panel.
      * @param templateRepositoryId The unique name of the {@link SourceCodeTemplateRepository repository} containing the
      *            {@link SourceCodeTemplate script templates} of the node.
      */
     public PythonNodeDialogContent(final NodeDialogPane dialog, final InputPort[] inPorts,
         final PythonSourceCodeConfig config, final PythonSourceCodePanel scriptPanel,
-        final PythonSourceCodeOptionsPanel optionsPanel, final PythonExecutableSelectionPanel executablePanel,
+        final PythonSourceCodeOptionsPanel optionsPanel, final PythonCommandSelectionPanel commandPanel,
         final String templateRepositoryId) {
         m_dialog = dialog;
         m_inPorts = inPorts;
         m_config = config;
-        m_python2CommandFlowVar = new PythonCommandFlowVariableModel(dialog, config.getPython2CommandConfig());
-        m_python3CommandFlowVar = new PythonCommandFlowVariableModel(dialog, config.getPython3CommandConfig());
         m_scriptPanel = scriptPanel;
         m_optionsPanel = optionsPanel;
-        m_executablePanel = executablePanel;
+        m_commandPanel = commandPanel;
         // TODO: ideally, we should filter the offered templates based upon the current port configuration.
         m_templatesPanel = new SourceCodeTemplatesPanel(m_scriptPanel, templateRepositoryId);
-
-        m_python2CommandFlowVar.addCommandChangeListener(c -> m_executablePanel.updatePython2Command(c.orElse(null)));
-        m_python3CommandFlowVar.addCommandChangeListener(c -> m_executablePanel.updatePython3Command(c.orElse(null)));
     }
 
     /**
@@ -183,10 +176,10 @@ public final class PythonNodeDialogContent {
     }
 
     /**
-     * @return The executable selection panel.
+     * @return The Python command selection panel.
      */
-    public PythonExecutableSelectionPanel getExecutableSelectionPanel() {
-        return m_executablePanel;
+    public PythonCommandSelectionPanel getCommandSelectionPanel() {
+        return m_commandPanel;
     }
 
     /**
