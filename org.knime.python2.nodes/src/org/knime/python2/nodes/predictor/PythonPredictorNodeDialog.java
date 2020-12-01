@@ -57,53 +57,38 @@ import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.workflow.FlowVariable;
+import org.knime.python2.config.PythonExecutableSelectionPanel;
 import org.knime.python2.config.PythonSourceCodeOptionsPanel;
 import org.knime.python2.config.PythonSourceCodePanel;
 import org.knime.python2.generic.templates.SourceCodeTemplatesPanel;
 import org.knime.python2.port.PickledObject;
 import org.knime.python2.port.PickledObjectPortObject;
+import org.knime.python2.prefs.PythonPreferences;
 
 /**
- * <code>NodeDialog</code> for the node.
- *
- *
  * @author Patrick Winter, KNIME AG, Zurich, Switzerland
  */
 @Deprecated
-class PythonPredictorNodeDialog extends DataAwareNodeDialogPane {
+final class PythonPredictorNodeDialog extends DataAwareNodeDialogPane {
 
-    PythonSourceCodePanel m_sourceCodePanel;
+    private final PythonSourceCodePanel m_sourceCodePanel;
 
-    PythonSourceCodeOptionsPanel m_sourceCodeOptionsPanel;
+    private final PythonSourceCodeOptionsPanel m_sourceCodeOptionsPanel;
 
-    SourceCodeTemplatesPanel m_templatesPanel;
+    private final SourceCodeTemplatesPanel m_templatesPanel;
 
-    /**
-     * Create the dialog for this node.
-     */
-    protected PythonPredictorNodeDialog() {
+    public PythonPredictorNodeDialog() {
         m_sourceCodePanel = new PythonSourceCodePanel(this, PythonPredictorNodeConfig.getVariableNames());
-        m_sourceCodeOptionsPanel = new PythonSourceCodeOptionsPanel(m_sourceCodePanel);
+        final PythonExecutableSelectionPanel executablePanel = new PythonExecutableSelectionPanel(
+            PythonPreferences::getPython2CommandPreference, PythonPreferences::getPython3CommandPreference);
+        m_sourceCodeOptionsPanel = new PythonSourceCodeOptionsPanel(m_sourceCodePanel, executablePanel);
         m_templatesPanel = new SourceCodeTemplatesPanel(m_sourceCodePanel, "python-predictor");
         addTab("Script", m_sourceCodePanel, false);
-        addTab("Options", m_sourceCodeOptionsPanel, true);
-        addTab("Templates", m_templatesPanel, true);
+        addTab("Options", m_sourceCodeOptionsPanel);
+        addTab(PythonExecutableSelectionPanel.DEFAULT_TAB_NAME, executablePanel);
+        addTab("Templates", m_templatesPanel);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
-        final PythonPredictorNodeConfig config = new PythonPredictorNodeConfig();
-        m_sourceCodePanel.saveSettingsTo(config);
-        m_sourceCodeOptionsPanel.saveSettingsTo(config);
-        config.saveTo(settings);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void loadSettingsFrom(final NodeSettingsRO settings, final PortObjectSpec[] specs)
         throws NotConfigurableException {
@@ -117,9 +102,6 @@ class PythonPredictorNodeDialog extends DataAwareNodeDialogPane {
             new PickledObject[]{null});
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void loadSettingsFrom(final NodeSettingsRO settings, final PortObject[] input)
         throws NotConfigurableException {
@@ -136,28 +118,26 @@ class PythonPredictorNodeDialog extends DataAwareNodeDialogPane {
             new PickledObject[]{inPickledObject});
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
+    protected void saveSettingsTo(final NodeSettingsWO settings) throws InvalidSettingsException {
+        final PythonPredictorNodeConfig config = new PythonPredictorNodeConfig();
+        m_sourceCodePanel.saveSettingsTo(config);
+        m_sourceCodeOptionsPanel.saveSettingsTo(config);
+        config.saveTo(settings);
+    }
+
     @Override
     public boolean closeOnESC() {
         return false;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void onOpen() {
         m_sourceCodePanel.open();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void onClose() {
         m_sourceCodePanel.close();
     }
-
 }
